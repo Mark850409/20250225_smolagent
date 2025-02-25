@@ -116,7 +116,7 @@ stages:
     # 建立 Web App
     - task: AzureCLI@2
       inputs:
-        azureSubscription: '$(AZURE_SUBSCRIPTION_NAME)'
+        azureSubscription: '$(azureServiceConnection)'
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
