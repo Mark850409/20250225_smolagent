@@ -53,10 +53,10 @@ stages:
     pool:
       vmImage: 'ubuntu-latest'
     steps:
-    # 登入 Azure
     - task: AzureCLI@2
+      name: SetACRVariables  # 添加名稱以便後續參考
       inputs:
-        azureSubscription: 'rg-mbti-analyzer'  # 使用你建立的服務連接名稱
+        azureSubscription: 'rg-mbti-analyzer'
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
@@ -70,15 +70,15 @@ stages:
             --sku Basic \
             --admin-enabled true
           
-          # 取得 ACR 登入資訊
+          # 取得 ACR 登入資訊並設定為輸出變數
           ACR_USERNAME=$(az acr credential show -n $(acrName) --query "username" -o tsv)
           ACR_PASSWORD=$(az acr credential show -n $(acrName) --query "passwords[0].value" -o tsv)
+          ACR_LOGIN_SERVER=$(acrName).azurecr.io
           
           # 設定 pipeline 變數
-          echo "##vso[task.setvariable variable=ACR_USERNAME;]$ACR_USERNAME"
-          echo "##vso[task.setvariable variable=ACR_PASSWORD;]$ACR_PASSWORD"
-          echo "##vso[task.setvariable variable=ACR_LOGIN_SERVER;]$(acrName).azurecr.io"
-      displayName: 'Create Azure Container Registry'
+          echo "##vso[task.setvariable variable=ACR_USERNAME;isOutput=true]$ACR_USERNAME"
+          echo "##vso[task.setvariable variable=ACR_PASSWORD;isOutput=true]$ACR_PASSWORD"
+          echo "##vso[task.setvariable variable=ACR_LOGIN_SERVER;isOutput=true]$ACR_LOGIN_SERVER"
 
 - stage: Build
   displayName: 'Build and Push Docker Image'
@@ -110,13 +110,18 @@ stages:
 
 - stage: Deploy
   displayName: 'Deploy to Azure Web App'
-  dependsOn: Build
+  dependsOn: 
+  - Infrastructure
+  - Build
+  variables:
+    ACR_USERNAME: $[ stageDependencies.Infrastructure.CreateInfrastructure.outputs['SetACRVariables.ACR_USERNAME'] ]
+    ACR_PASSWORD: $[ stageDependencies.Infrastructure.CreateInfrastructure.outputs['SetACRVariables.ACR_PASSWORD'] ]
+    ACR_LOGIN_SERVER: $[ stageDependencies.Infrastructure.CreateInfrastructure.outputs['SetACRVariables.ACR_LOGIN_SERVER'] ]
   jobs:
   - job: Deploy
     pool:
       vmImage: 'ubuntu-latest'
     steps:
-    # 建立 Web App
     - task: AzureCLI@2
       inputs:
         azureSubscription: 'rg-mbti-analyzer'
@@ -137,17 +142,6 @@ stages:
             --name $(webAppName) \
             --deployment-container-image-name $(ACR_LOGIN_SERVER)/$(imageRepository):latest
           
-          # 設定環境變數
-          az webapp config appsettings set \
-            --resource-group $(resourceGroupName) \
-            --name $(webAppName) \
-            --settings \
-            WEBSITES_PORT=5000 \
-            EMBEDDING_MODEL_NAME=$(EMBEDDING_MODEL_NAME) \
-            HUGGINGFACE_API_KEY=$(HUGGINGFACE_API_KEY) \
-            HUGGINGFACE_MODEL=$(HUGGINGFACE_MODEL) \
-            SERP_API_KEY=$(SERP_API_KEY)
-          
           # 設定 ACR 認證
           az webapp config container set \
             --resource-group $(resourceGroupName) \
@@ -155,4 +149,14 @@ stages:
             --docker-registry-server-url https://$(ACR_LOGIN_SERVER) \
             --docker-registry-server-user $(ACR_USERNAME) \
             --docker-registry-server-password $(ACR_PASSWORD)
-      displayName: 'Create and Configure Web App'
+            
+          # 設定環境變數
+          az webapp config appsettings set \
+            --resource-group $(resourceGroupName) \
+            --name $(webAppName) \
+            --settings \
+            WEBSITES_PORT=5000 \
+            EMBEDDING_MODEL_NAME="$(EMBEDDING_MODEL_NAME)" \
+            HUGGINGFACE_API_KEY="$(HUGGINGFACE_API_KEY)" \
+            HUGGINGFACE_MODEL="$(HUGGINGFACE_MODEL)" \
+            SERP_API_KEY="$(SERP_API_KEY)"
