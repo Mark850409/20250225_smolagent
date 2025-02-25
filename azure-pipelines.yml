@@ -18,8 +18,8 @@ resources:
 
 variables: 
   - group: mbti-analyzer-variables  # 引入變數群組
-  - name: serviceConnection  # Azure 服務連接名稱
-    value: 'rg-mbti-analyzer'  # 根據你在 Azure DevOps 中建立的服務連接名稱
+  - name: azureServiceConnection  # 新增這個變數
+    value: 'rg-mbti-analyzer'    # 使用您剛才建立的服務連接名稱
   - name: projectName  # 專案設定
     value: 'mbti-analyzer'
   - name: pythonVersion
@@ -53,7 +53,7 @@ stages:
     # 登入 Azure
     - task: AzureCLI@2
       inputs:
-        azureSubscription: 'rg-mbti-analyzer'  # 使用你建立的服務連接名稱
+        azureSubscription: '$(azureServiceConnection)'  # 使用你建立的服務連接名稱
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
