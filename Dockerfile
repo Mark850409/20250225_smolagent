@@ -9,10 +9,6 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
     software-properties-common \
-    libx11-xcb1 \
-    libxcursor1 \
-    libgtk-3-0 \
-    libgdk-3-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # 複製專案檔案
