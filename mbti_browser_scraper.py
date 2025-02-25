@@ -17,17 +17,11 @@ load_dotenv()
 # 初始化模型工廠
 model_factory = ModelFactory()
 
-# 初始化 HuggingFace 模型和 embeddings
+# 初始化 HuggingFace 模型
 hf_provider = ModelFactory.create_provider(
     "huggingface", 
     os.getenv('HUGGINGFACE_MODEL')
 )
-
-# 初始化 embeddings (使用專門的嵌入模型)
-embeddings = ModelFactory.create_provider(
-    "huggingface", 
-    os.getenv('EMBEDDING_MODEL_NAME')
-).embeddings
 
 # 初始化繁簡轉換器
 cc = OpenCC('s2t')  # 簡體轉繁體
@@ -265,7 +259,7 @@ def create_vector_store(csv_path: str = None) -> str:
             texts.append(text)
             
             # 獲取文本的向量表示
-            vector = embeddings.embed_query(text)
+            vector = hf_provider.embed_query(text)
             all_vectors.append(vector)
             
             # 準備元數據
@@ -343,7 +337,7 @@ def query_mbti_data(query: str) -> str:
             data = json.load(f)
         
         # 獲取查詢向量
-        query_vector = embeddings.embed_query(query)
+        query_vector = hf_provider.embed_query(query)
         query_vector = np.array([query_vector], dtype=np.float32)
 
         # 執行查詢
@@ -400,7 +394,13 @@ model = HfApiModel(
 
 # 初始化代理
 agent = ToolCallingAgent(
-    tools=[browse_webpage, extract_mbti_info, save_data, create_vector_store, query_mbti_data],
+    tools=[
+        browse_webpage, 
+        extract_mbti_info, 
+        save_data, 
+        create_vector_store, 
+        query_mbti_data
+    ],
     model=model
 )
 

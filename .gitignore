@@ -26,3 +26,38 @@ backend/**/__pycache__/
 # docker
 data/
 data/**
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 虛擬環境
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+
+# 專案特定
+mbti_data/
+.env

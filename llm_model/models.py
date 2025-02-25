@@ -6,7 +6,7 @@ import json
 import requests
 from huggingface_hub import InferenceClient
 import google.generativeai as genai
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from sentence_transformers import SentenceTransformer
 
 # 載入環境變數
 load_dotenv()
@@ -30,10 +30,9 @@ class BaseModelProvider(ABC):
         """聊天對話"""
         pass
 
-    @property
-    def embeddings(self):
-        """獲取嵌入模型"""
-        return None
+    def embed_query(self, text: str) -> List[float]:
+        """將文本轉換為向量"""
+        return []
 
 class OpenAIProvider(BaseModelProvider):
     """OpenAI 模型供應商"""
@@ -135,7 +134,7 @@ class HuggingFaceProvider(BaseModelProvider):
             raise ValueError("未設置 HUGGINGFACE_API_KEY")
         self._model_name = model_name
         self.client = InferenceClient(model=model_name, token=self.api_key)
-        self._embeddings = None
+        self._embedding_model = None
 
     @property
     def model_name(self) -> str:
@@ -161,20 +160,11 @@ class HuggingFaceProvider(BaseModelProvider):
         )
         return response
 
-    @property
-    def embeddings(self):
-        """獲取或初始化嵌入模型"""
-        if self._embeddings is None:
-            if "sentence-transformers" in self.model_name:
-                self._embeddings = HuggingFaceEmbeddings(
-                    model_name=self.model_name
-                )
-            else:
-                # 如果不是 sentence-transformers 模型，使用默認的嵌入模型
-                self._embeddings = HuggingFaceEmbeddings(
-                    model_name="sentence-transformers/all-MiniLM-L6-v2"
-                )
-        return self._embeddings
+    def embed_query(self, text: str) -> List[float]:
+        """將文本轉換為向量"""
+        if self._embedding_model is None:
+            self._embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+        return self._embedding_model.encode(text, convert_to_numpy=True)
 
 class OllamaProvider(BaseModelProvider):
     """Ollama 模型供應商"""
