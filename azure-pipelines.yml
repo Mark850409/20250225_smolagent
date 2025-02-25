@@ -88,17 +88,27 @@ stages:
     # 登入 ACR
     - task: Docker@2
       inputs:
-        containerRegistry: '$(acrName)'
+        containerRegistry: |
+          {
+            "id": "/subscriptions/$(AZURE_SUBSCRIPTION_ID)/resourceGroups/$(resourceGroupName)/providers/Microsoft.ContainerRegistry/registries/$(acrName)",
+            "loginServer": "$(acrName).azurecr.io",
+            "type": "ACR"
+          }
         command: 'login'
       displayName: 'Login to ACR'
 
     # 建立並推送 Docker 映像
     - task: Docker@2
       inputs:
-        containerRegistry: '$(acrName)'
+        containerRegistry: |
+          {
+            "id": "/subscriptions/$(AZURE_SUBSCRIPTION_ID)/resourceGroups/$(resourceGroupName)/providers/Microsoft.ContainerRegistry/registries/$(acrName)",
+            "loginServer": "$(acrName).azurecr.io",
+            "type": "ACR"
+          }
         repository: '$(imageRepository)'
         command: 'buildAndPush'
-        Dockerfile: '**/Dockerfile'
+        Dockerfile: '$(dockerfilePath)'
         buildContext: '$(Build.SourcesDirectory)'
         tags: |
           $(Build.BuildId)
