@@ -53,7 +53,7 @@ stages:
     # 登入 Azure
     - task: AzureCLI@2
       inputs:
-        azureSubscription: 'Azure for Students (e7736fb9-bed4-4d1d-96d2-c79eb2c181c4)'  # 使用你建立的服務連接名稱
+        azureSubscription: 'rg-mbti-analyzer'  # 使用你建立的服務連接名稱
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
@@ -116,7 +116,7 @@ stages:
     # 建立 Web App
     - task: AzureCLI@2
       inputs:
-        azureSubscription: 'Azure for Students (e7736fb9-bed4-4d1d-96d2-c79eb2c181c4)'
+        azureSubscription: 'rg-mbti-analyzer'
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
