@@ -1,0 +1,28 @@
+# Development
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env
+*.pyc
+backend/__pycache__/
+backend/**/__pycache__/
+
+# IDE specific files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw? 
+
+# docker
+data/
+data/**
