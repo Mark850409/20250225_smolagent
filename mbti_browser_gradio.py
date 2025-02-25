@@ -93,9 +93,9 @@ def process_mbti_data(urls: str, progress: str = "") -> str:
             latest_csv = os.path.join("mbti_data/csv", csv_files[0])
             df = pd.read_csv(latest_csv)
             
-            # 準備分析數據
+            # 準備分析提示詞
             analysis_prompt = f"""
-請使用繁體中文分析以下統計數據，並生成結構化的分析報告：
+請根據以下 MBTI 數據進行深入分析，並以繁體中文回覆。請注意分析應包含具體數據支持：
 
 === MBTI 數據分析報告 ===
 
@@ -117,7 +117,7 @@ MBTI類型：{len(df['personality_type'].unique())} 種
 |----------|------|------|
 {df['occupation'].value_counts().apply(lambda x: f"{x} | {x/len(df)*100:.1f}%").to_string()}
 
-請根據以上數據進行分析：
+請根據以上統計數據進行分析：
 
 1. 類型分布特徵
    - 主要類型分布
@@ -129,12 +129,23 @@ MBTI類型：{len(df['personality_type'].unique())} 種
    - 類型職業關聯
    - 跨類型共同點
 
-3. 綜合建議
+3. 深入觀察
+   - 性格特質與職業選擇的關係
+   - 各類型在不同職業領域的表現
+   - 職業發展潛力分析
+
+4. 綜合建議
    - 重要發現
    - 實務應用
    - 未來展望
+   - 研究限制
 
-請以繁體中文撰寫分析報告，確保內容清晰易讀。
+請提供詳細的分析報告，確保：
+1. 數據論述具體且有支持證據
+2. 分析角度多元且深入
+3. 建議實用且具可行性
+4. 文字表達清晰易讀
+5. 結論具有實務參考價值
 """
             
             final_analysis = agent.run(analysis_prompt)
