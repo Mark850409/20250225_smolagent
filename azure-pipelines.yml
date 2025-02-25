@@ -18,8 +18,8 @@ resources:
 
 variables: 
   - group: mbti-analyzer-variables  # 引入變數群組
-  - name: azureServiceConnection  # 新增這個變數
-    value: 'rg-mbti-analyzer'    # 使用您剛才建立的服務連接名稱
+  - name: azureServiceConnection  # Azure 服務連接名稱
+    value: 'acrmbtianlyzer'    # 使用 ACR 的服務連接名稱
   - name: projectName  # 專案設定
     value: 'mbti-analyzer'
   - name: pythonVersion
@@ -88,24 +88,14 @@ stages:
     # 登入 ACR
     - task: Docker@2
       inputs:
-        containerRegistry: |
-          {
-            "id": "/subscriptions/$(AZURE_SUBSCRIPTION_ID)/resourceGroups/$(resourceGroupName)/providers/Microsoft.ContainerRegistry/registries/$(acrName)",
-            "loginServer": "$(acrName).azurecr.io",
-            "type": "ACR"
-          }
+        containerRegistry: '$(azureServiceConnection)'
         command: 'login'
       displayName: 'Login to ACR'
 
     # 建立並推送 Docker 映像
     - task: Docker@2
       inputs:
-        containerRegistry: |
-          {
-            "id": "/subscriptions/$(AZURE_SUBSCRIPTION_ID)/resourceGroups/$(resourceGroupName)/providers/Microsoft.ContainerRegistry/registries/$(acrName)",
-            "loginServer": "$(acrName).azurecr.io",
-            "type": "ACR"
-          }
+        containerRegistry: '$(azureServiceConnection)'
         repository: '$(imageRepository)'
         command: 'buildAndPush'
         Dockerfile: '$(dockerfilePath)'
