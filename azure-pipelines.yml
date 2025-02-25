@@ -19,7 +19,7 @@ resources:
 variables: 
   - group: mbti-analyzer-variables  # 引入變數群組
   - name: azureServiceConnection  # Azure 服務連接名稱
-    value: 'acrmbtianlyzer'    # 使用 ACR 的服務連接名稱
+    value: 'acrmbtianlyzer.azurecr.io'    # 使用完整的 ACR 登入伺服器名稱
   - name: projectName  # 專案設定
     value: 'mbti-analyzer'
   - name: pythonVersion
@@ -31,7 +31,7 @@ variables:
   - name: location
     value: 'eastasia'
   - name: acrName
-    value: 'acrmbtianalyzer'  # ACR 名稱必須是全域唯一的
+    value: 'acrmbtianlyzer'  # ACR 名稱必須是全域唯一的
   - name: webAppName
     value: 'app-mbti-analyzer'
   
@@ -42,6 +42,9 @@ variables:
     value: '$(Build.SourcesDirectory)/Dockerfile'
   - name: tag
     value: '$(Build.BuildId)'
+  - name: dockerRegistryServiceConnection
+    value: 'azureServiceConnection'  # 新增 Docker 登錄服務連接名稱
+
 stages:
 - stage: Infrastructure
   displayName: 'Create Azure Infrastructure'
@@ -88,14 +91,14 @@ stages:
     # 登入 ACR
     - task: Docker@2
       inputs:
-        containerRegistry: '$(azureServiceConnection)'
+        containerRegistry: '$(dockerRegistryServiceConnection)'
         command: 'login'
       displayName: 'Login to ACR'
 
     # 建立並推送 Docker 映像
     - task: Docker@2
       inputs:
-        containerRegistry: '$(azureServiceConnection)'
+        containerRegistry: '$(dockerRegistryServiceConnection)'
         repository: '$(imageRepository)'
         command: 'buildAndPush'
         Dockerfile: '$(dockerfilePath)'
