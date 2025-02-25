@@ -22,11 +22,11 @@ RUN playwright install chromium
 RUN playwright install-deps
 
 # 設定環境變數
-ENV PORT=8000
+ENV PORT=5000
 ENV HOST=0.0.0.0
 
 # 暴露端口
-EXPOSE 8000
+EXPOSE 5000
 
 # 啟動應用
 CMD ["python", "app.py"] 
