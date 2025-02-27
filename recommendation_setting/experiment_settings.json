@@ -1,0 +1,15 @@
+{
+    "data_settings": {
+        "train_ratio": 80,
+        "test_ratio": 20,
+        "rating_threshold": 3.5,
+        "sentiment_threshold": 0.5
+    },
+    "dataset_info": {
+        "total_users": 2350,
+        "total_items": 1680,
+        "total_ratings": 16345,
+        "total_reviews": 12890,
+        "sparsity": 0.9967
+    }
+}
