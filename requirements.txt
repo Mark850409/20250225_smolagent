@@ -22,3 +22,4 @@ opencc-python-reimplemented
 requests
 beautifulsoup4
 pillow
+tavily-python

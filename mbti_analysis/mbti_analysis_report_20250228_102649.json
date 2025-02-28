@@ -1,0 +1,29 @@
+{
+  "timestamp": "20250228_102649",
+  "stats": {
+    "total_samples": 28,
+    "type_distribution": {
+      "ENTJ": 3,
+      "INFJ": 3,
+      "INFP": 3,
+      "INTP": 2,
+      "ENFJ": 2,
+      "ENFP": 2,
+      "ISTJ": 2,
+      "ESTJ": 2,
+      "ISFJ": 2,
+      "INTJ": 1,
+      "ENTP": 1,
+      "ESFJ": 1,
+      "ISTP": 1,
+      "ESTP": 1,
+      "ISFP": 1,
+      "ESFP": 1
+    },
+    "occupation_distribution": {
+      "其他": 25,
+      "企業家": 3
+    }
+  },
+  "analysis_report": "根據提供的 MBTI 數據分析報告，總樣本數為 28 筆。MBTI 類型分布中，ENTJ、INFJ 和 INFP 各有 3 筆樣本，佔總樣本的 10.7%；INTP、ENFJ、ENFP、ISTJ、ESTJ 和 ISFJ 各有 2 筆樣本，佔 7.1%；INTJ、ENTP、ESFJ、ISTP、ESTP、ISFP 和 ESFP 各有 1 筆樣本，佔 3.6%。這些數據顯示了樣本中較多的人傾向於 ENTJ、INFJ 和 INFP 這三種類型。在職業分布方面，大部分樣本（89.3%）屬於其他類別，僅有 10.7% 的樣本自稱為企業家。這表明在這組樣本中，大多數人的職業並非企業家。"
+}
