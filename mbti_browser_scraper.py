@@ -1,5 +1,5 @@
 from smolagents import ToolCallingAgent, HfApiModel, tool
-from playwright.sync_api import sync_playwright
+from playwright.async_api import async_playwright
 from llm_model.models import ModelFactory
 import pandas as pd
 import os
@@ -10,6 +10,7 @@ import json
 from opencc import OpenCC
 import faiss
 import numpy as np
+import asyncio
 
 # 載入環境變數
 load_dotenv()
@@ -26,6 +27,7 @@ hf_provider = ModelFactory.create_provider(
 # 初始化繁簡轉換器
 cc = OpenCC('s2t')  # 簡體轉繁體
 
+
 @tool
 def browse_webpage(url: str) -> str:
     """瀏覽網頁並返回內容
@@ -36,33 +38,55 @@ def browse_webpage(url: str) -> str:
     Returns:
         str: 網頁內容
     """
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-        try:
-            print(f"正在訪問: {url}")
-            page.goto(url)
-            page.wait_for_selector('body', timeout=30000)
-            
-            # 等待動態內容加載
-            time.sleep(5)
-            
-            # 獲取所有文本內容
-            text_content = page.evaluate('''() => {
-                const elements = document.querySelectorAll('p, h1, h2, h3, h4, h5, article, section');
-                return Array.from(elements).map(el => el.textContent).join('\\n');
-            }''')
-            
-            # 轉換為繁體中文
-            text_content = cc.convert(text_content)
-            
-            browser.close()
-            return text_content
-        except Exception as e:
-            browser.close()
-            error_msg = f"錯誤：{str(e)}"
-            print(error_msg)
-            return error_msg
+    async def _browse():
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page()
+            try:
+                print(f"正在訪問: {url}")
+                await page.goto(url)
+                await page.wait_for_selector('body', timeout=30000)
+                
+                # 等待動態內容加載
+                await page.wait_for_timeout(5000)
+                
+                # 獲取所有文本內容
+                text_content = await page.evaluate('''() => {
+                    const elements = document.querySelectorAll('p, h1, h2, h3, h4, h5, article, section');
+                    return Array.from(elements).map(el => el.textContent).join('\\n');
+                }''')
+                
+                # 轉換為繁體中文
+                text_content = cc.convert(text_content)
+                
+                await browser.close()
+                return text_content
+                
+            except Exception as e:
+                await browser.close()
+                error_msg = f"錯誤：{str(e)}"
+                print(error_msg)
+                return error_msg
+
+    # 檢查是否已有事件循環
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        # 如果沒有事件循環，創建一個新的
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(_browse())
+        loop.close()
+        return result
+    else:
+        # 如果已有事件循環，直接在當前循環中運行
+        if loop.is_running():
+            # 如果循環正在運行，使用 run_coroutine_threadsafe
+            future = asyncio.run_coroutine_threadsafe(_browse(), loop)
+            return future.result()
+        else:
+            # 如果循環未運行，使用 run_until_complete
+            return loop.run_until_complete(_browse())
 
 @tool
 def extract_mbti_info(content: str) -> dict:
@@ -258,7 +282,7 @@ def create_vector_store(csv_path: str = None) -> str:
                    f"Description: {row['description']}\n")
             texts.append(text)
             
-            # 獲取文本的向量表示
+            # 使用 HuggingFace 模型獲取向量表示
             vector = hf_provider.embed_query(text)
             all_vectors.append(vector)
             
@@ -365,7 +389,7 @@ def query_mbti_data(query: str) -> str:
     except Exception as e:
         return f"查詢失敗: {str(e)}\n錯誤類型: {type(e).__name__}"
 
-# 初始化模型和代理
+# 初始化系統提示詞
 messages = [
     {
         "role": "system",
