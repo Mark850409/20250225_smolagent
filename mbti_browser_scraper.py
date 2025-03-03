@@ -325,12 +325,13 @@ def create_vector_store(csv_path: str = None) -> str:
         return f"向量存儲建立失敗: {str(e)}\n錯誤類型: {type(e).__name__}"
 
 @tool
-def query_mbti_data(query: str) -> str:
+def query_mbti_data(query: str, store_name: str = None) -> str:
     """
     查詢 MBTI 向量數據庫。
 
     Args:
         query: 查詢文本
+        store_name: 指定要查詢的向量存儲目錄名稱,如果為 None 則使用最新的
 
     Returns:
         查詢結果
@@ -340,16 +341,18 @@ def query_mbti_data(query: str) -> str:
         if not os.path.exists(vector_dir):
             return "錯誤：找不到向量存儲目錄"
 
-        # 尋找最新的向量存儲目錄
+        # 獲取所有向量存儲目錄
         vector_stores = [d for d in os.listdir(vector_dir) 
                         if os.path.isdir(os.path.join(vector_dir, d))]
         
         if not vector_stores:
             return "錯誤：找不到向量存儲"
 
-        # 使用最新的向量存儲
-        latest_store = max(vector_stores)
-        store_dir = os.path.join(vector_dir, latest_store)
+        # 如果沒有指定存儲名稱,使用最新的
+        if store_name is None or store_name not in vector_stores:
+            store_name = max(vector_stores)
+            
+        store_dir = os.path.join(vector_dir, store_name)
 
         # 載入 FAISS 索引
         index_path = os.path.join(store_dir, "index.faiss")
@@ -377,14 +380,34 @@ def query_mbti_data(query: str) -> str:
             distance = distances[0][i]
             text = data["texts"][int(idx)]
             metadata = data["metadatas"][int(idx)]
-            formatted_results.append(
-                f"相關度: {1/(1+distance):.2f}\n"
-                f"文本: {text}\n"
-                f"類型: {metadata['personality_type']}\n"
-                f"職業: {metadata['occupation']}"
-            )
+            
+            # 美化輸出格式
+            result = f"""
+{'='*50}
+【搜尋結果 {i+1}】相關度: {1/(1+distance):.2f}
+{'-'*50}
+▍MBTI類型：{metadata['personality_type']}
+▍職業類別：{metadata['occupation']}
+{'-'*50}
+▍詳細描述：
+{text.strip()}
+{'='*50}
+"""
+            formatted_results.append(result)
 
-        return "\n\n---\n\n".join(formatted_results)
+        # 添加查詢資訊
+        header = f"""
+【查詢內容】
+{query}
+
+【使用知識庫】
+{store_name}
+
+【查詢結果】
+共找到 {len(formatted_results)} 筆相關資料
+"""
+        
+        return header + "\n".join(formatted_results)
 
     except Exception as e:
         return f"查詢失敗: {str(e)}\n錯誤類型: {type(e).__name__}"

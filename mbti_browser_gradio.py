@@ -1,5 +1,5 @@
 from mbti_browser_scraper import (browse_webpage, extract_mbti_info, save_data, 
-                                create_vector_store, query_mbti_data, agent)
+                                HfApiModel,create_vector_store, query_mbti_data, agent)
 import gradio as gr
 import pandas as pd
 import os
@@ -10,8 +10,8 @@ from dotenv import load_dotenv
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict
 import threading
-import google.generativeai as genai
-genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+
+
 # 載入環境變數
 load_dotenv()
 tavily_api_key = os.getenv('TAVILY_API_KEY')
@@ -226,11 +226,25 @@ def view_csv_content(csv_name):
         print(f"讀取檔案錯誤：{str(e)}")
         return None
 
-def custom_query(query_text):
-    """執行自定義查詢"""
+def list_vector_stores():
+    """列出所有可用的向量存儲"""
+    vector_dir = "mbti_data/vectors"
+    if not os.path.exists(vector_dir):
+        return []
+    stores = [d for d in os.listdir(vector_dir) 
+              if os.path.isdir(os.path.join(vector_dir, d))]
+    return sorted(stores, reverse=True)  # 最新的排在最前面
+
+def custom_query(query_text: str, store_name: str = None) -> str:
+    """執行自定義查詢
+    
+    Args:
+        query_text: 查詢文本
+        store_name: 指定要查詢的向量存儲名稱
+    """
     if not query_text:
         return "請輸入查詢內容"
-    return query_mbti_data(query_text)
+    return query_mbti_data(query_text, store_name)
 
 def is_english(text: str) -> bool:
     """檢查文本是否主要為英文
@@ -477,11 +491,8 @@ def tavily_search_mbti(prompt: str, progress: str = "") -> str:
             progress_text += f"共 {len(all_data['occupation'])} 筆\n"
             progress_text += "-"*30 + "\n"
             
-            # 使用 Gemini 進行批量翻譯
-            model = genai.GenerativeModel('gemini-2.0-flash')
             occupations_text = "\n---\n".join(all_data["occupation"])
-            occupation_prompt = f"""
-請將以下職業列表翻譯成中文，保持專業性和準確性。
+            occupation_prompt = f"""請將以下職業列表翻譯成中文，保持專業性和準確性。
 每個職業之間使用 "---" 分隔：
 
 {occupations_text}
@@ -492,8 +503,10 @@ def tavily_search_mbti(prompt: str, progress: str = "") -> str:
 3. 只需要輸出中文翻譯結果，不需要其他說明
 4. 使用 "---" 分隔不同職業的翻譯
 """
-            response = model.generate_content(occupation_prompt)
-            occupations_zh = response.text.strip().split("\n---\n")
+
+            # 使用 agent 進行翻譯
+            response = agent.run(occupation_prompt)
+            occupations_zh = response.strip().split("\n---\n")
             
             translated_data["occupation"] = occupations_zh
             for en, zh in zip(all_data["occupation"], occupations_zh):
@@ -722,14 +735,44 @@ https://tw.imyfone.com/ai-tips/16-personalities-interpretation/"""
         
         # 自定義查詢標籤
         with gr.Tab("RAG生成式檢索查詢"):
-            gr.Markdown("### 查詢 MBTI 數據")
+            gr.Markdown("""### 查詢 MBTI 數據
+            選擇要查詢的知識庫並輸入查詢內容。知識庫按時間排序,最新的在最前面。
+            """)
+            
+            with gr.Row():
+                # 添加向量存儲選擇下拉框
+                stores = list_vector_stores()
+                vector_store_dropdown = gr.Dropdown(
+                    choices=stores,
+                    value=stores[0] if stores else None,
+                    label="選擇知識庫",
+                    interactive=True
+                )
+                refresh_stores_button = gr.Button("刷新知識庫列表")
+            
             query_input = gr.Textbox(
                 label="輸入查詢內容",
                 placeholder="例如：INTJ 的職業傾向是什麼？"
             )
             query_button = gr.Button("執行查詢")
             query_output = gr.Textbox(label="查詢結果", lines=15)
-            query_button.click(custom_query, inputs=query_input, outputs=query_output)
+            
+            # 更新知識庫列表的處理函數
+            def update_store_list():
+                stores = list_vector_stores()
+                return gr.update(choices=stores, value=stores[0] if stores else None)
+            
+            refresh_stores_button.click(
+                fn=update_store_list,
+                outputs=vector_store_dropdown
+            )
+            
+            # 修改查詢按鈕的點擊事件
+            query_button.click(
+                fn=custom_query,
+                inputs=[query_input, vector_store_dropdown],
+                outputs=query_output
+            )
         
 
 # 啟動 Web 介面
