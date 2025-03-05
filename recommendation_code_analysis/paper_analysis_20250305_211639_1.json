@@ -1,0 +1,13 @@
+{
+  "paper_info": {
+    "title": "Lenskit for python: Next-generation software for recommender systems experiments",
+    "authors": [
+      "MD Ekstrand"
+    ],
+    "year": "",
+    "abstract": "choices of the Java implementation were not a good  recommender systems packages for  Python (such as Surprise and PyRecLab) are often self-contained, like our Java LensKit code",
+    "url": "https://dl.acm.org/doi/abs/10.1145/3340531.3412778",
+    "source": "Google Scholar"
+  },
+  "analysis": "Error in generating final LLM output:\n500 Server Error: Internal Server Error for url: https://router.huggingface.co/hf-inference/models/Qwen/Qwen2.5-Coder-32B-Instruct/v1/chat/completions (Request ID: Root=1-67c84e7e-241bbf715e58c6d675c921e9;f77a6cdf-471e-46cc-9f55-894c8703fb36)\n\nModel too busy, unable to get response in less than 60 second(s)"
+}

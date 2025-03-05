@@ -1,0 +1,16 @@
+{
+  "paper_info": {
+    "title": "Is ChatGPT a Good Software Librarian? An Exploratory Study on the Use of ChatGPT for Software Library Recommendations",
+    "authors": [
+      "Jasmine Latendresse",
+      "SayedHassan Khatoonabadi",
+      "Ahmad Abdellatif",
+      "Emad Shihab"
+    ],
+    "year": 2024,
+    "abstract": "Software libraries play a critical role in the functionality, efficiency, and\nmaintainability of software systems. As developers increasingly rely on Large\nLanguage Models (LLMs) to streamline their coding processes, the effectiveness\nof these models in recommending appropriate libraries becomes crucial yet\nremains largely unexplored. In this paper, we assess the effectiveness of\nChatGPT as a software librarian and identify areas for improvement. We\nconducted an empirical study using GPT-3.5 Turbo to generate Python code for\n10,000 Stack Overflow questions. Our findings show that ChatGPT uses\nthird-party libraries nearly 10% more often than human developers, favoring\nwidely adopted and well-established options. However, 14.2% of the recommended\nlibraries had restrictive copyleft licenses, which were not explicitly\ncommunicated by ChatGPT. Additionally, 6.5% of the libraries did not work out\nof the box, leading to potential developer confusion and wasted time. While\nChatGPT can be an effective software librarian, it should be improved by\nproviding more explicit information on maintainability metrics and licensing.\nWe recommend that developers implement rigorous dependency management practices\nand double-check library licenses before integrating LLM-generated code into\ntheir projects.",
+    "url": "http://arxiv.org/pdf/2408.05128v1",
+    "source": "arXiv"
+  },
+  "analysis": "Error in generating final LLM output:\n402 Client Error: Payment Required for url: https://router.huggingface.co/hf-inference/models/Qwen/Qwen2.5-Coder-32B-Instruct/v1/chat/completions (Request ID: Root=1-67c84ec8-31f4e63d51ac083c2ec92f81;57cb39b8-cfcd-49e5-bd42-4bd755421d11)\n\nYou have exceeded your monthly included credits for Inference Providers. Subscribe to PRO to get 20x more monthly allowance."
+}

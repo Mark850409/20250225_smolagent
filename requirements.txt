@@ -7,7 +7,6 @@ langchain
 langchain-community
 pandas
 python-dotenv
-tavily-python
 # AI 模型和代理
 smolagents
 huggingface-hub

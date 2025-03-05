@@ -7,7 +7,7 @@ import json
 import os
 from datetime import datetime
 from recommendation_analysis import analyze_recommendation_results, agent, get_deep_analysis
-from mbti_browser_scraper import browse_webpage, extract_mbti_info, save_data, create_vector_store
+from mbti_browser_scraper import browse_webpage, extract_mbti_info, save_data, create_vector_store, query_mbti_data
 from mbti_analysis_scraper import analyze_mbti_stats
 from dotenv import load_dotenv
 from playwright.async_api import async_playwright
@@ -22,10 +22,26 @@ cc = OpenCC('s2t')
 
 # 創建 FastAPI 應用
 app = FastAPI(
-    title="推薦系統效能分析 API",
-    description="提供推薦系統效能分析的 RESTful API 服務",
+    title="MBTI 性格分析系統 API",
+    description="提供 MBTI 性格分析的 RESTful API 服務",
     version="1.0.0"
 )
+
+# 定義 API 標籤及其描述
+tags_metadata = [
+    {
+        "name": "MBTI資料分析報告",
+        "description": "生成和查看 MBTI 數據分析報告",
+    },
+    {
+        "name": "MBTI資料爬取",
+        "description": "從網頁爬取 MBTI 相關數據",
+    },
+    {
+        "name": "MBTI資料存儲",
+        "description": "管理 MBTI 數據的存儲和查詢",
+    }
+]
 
 # 定義資料模型
 class ExperimentSettings(BaseModel):
@@ -77,7 +93,7 @@ class MBTIAnalysisResponse(BaseModel):
     data: Optional[MBTIAnalysisResult]
 
 
-@app.get("/reports/", response_model=List[str], tags=["報告"])
+@app.get("/reports/", response_model=List[str], tags=["MBTI資料分析報告"])
 async def list_reports():
     """
     列出所有已生成的分析報告
@@ -91,7 +107,7 @@ async def list_reports():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/reports/{report_name}", response_model=AnalysisResult, tags=["報告"])
+@app.get("/reports/{report_name}", response_model=AnalysisResult, tags=["MBTI資料分析報告"])
 async def get_report(report_name: str):
     """
     獲取指定報告的內容
@@ -138,7 +154,7 @@ async def async_browse_webpage(url: str) -> str:
             print(error_msg)
             return error_msg
 
-@app.post("/mbti/scrape/", response_model=MBTIResponse, tags=["MBTI"])
+@app.post("/mbti/scrape/", response_model=MBTIResponse, tags=["MBTI資料爬取"])
 async def scrape_mbti_data(url_input: URLInput):
     """
     從指定的網址抓取 MBTI 相關資料
@@ -194,7 +210,7 @@ async def scrape_mbti_data(url_input: URLInput):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/mbti/data/", response_model=List[str], tags=["MBTI"])
+@app.get("/mbti/data/", response_model=List[str], tags=["MBTI資料存儲"])
 async def list_mbti_data():
     """
     列出所有已抓取的 MBTI 資料檔案
@@ -208,7 +224,7 @@ async def list_mbti_data():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/mbti/data/{file_name}", tags=["MBTI"])
+@app.get("/mbti/data/{file_name}", tags=["MBTI資料存儲"])
 async def get_mbti_data(file_name: str):
     """
     獲取指定 MBTI 資料檔案的內容
@@ -226,7 +242,7 @@ async def get_mbti_data(file_name: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/mbti/analyze/", response_model=MBTIAnalysisResponse, tags=["MBTI"])
+@app.post("/mbti/analyze/", response_model=MBTIAnalysisResponse, tags=["MBTI資料分析報告"])
 async def analyze_mbti_data(file: UploadFile = File(...)):
     """
     分析 MBTI 數據檔案
@@ -311,6 +327,107 @@ async def analyze_mbti_data(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/mbti/vectors/", response_model=List[str], tags=["MBTI資料存儲"])
+async def list_vector_stores():
+    """
+    列出所有可用的向量存儲
+    """
+    try:
+        vector_dir = "mbti_data/vectors"
+        if not os.path.exists(vector_dir):
+            return []
+        stores = [d for d in os.listdir(vector_dir) 
+                 if os.path.isdir(os.path.join(vector_dir, d))]
+        return sorted(stores, reverse=True)  # 最新的排在最前面
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class QueryInput(BaseModel):
+    query: str
+    store_name: Optional[str] = None
+
+class QueryResponse(BaseModel):
+    status: str
+    message: str
+    results: str
+
+@app.post("/mbti/query/", response_model=QueryResponse, tags=["MBTI資料存儲"])
+async def query_vector_data(query_input: QueryInput):
+    """
+    查詢 MBTI 向量數據庫
+    
+    - **query**: 查詢文本
+    - **store_name**: 指定要查詢的向量存儲名稱（可選）
+    """
+    try:
+        # 解包參數
+        query = query_input.query
+        store_name = query_input.store_name
+        
+        # 如果 store_name 為 None，query_mbti_data 會使用最新的存儲
+        if store_name:
+            # 檢查存儲是否存在
+            vector_dir = "mbti_data/vectors"
+            if not os.path.exists(os.path.join(vector_dir, store_name)):
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"找不到向量存儲: {store_name}"
+                )
+        
+        # 執行查詢，使用關鍵字參數
+        results = query_mbti_data(query=query, store_name=store_name)
+        
+        return QueryResponse(
+            status="success",
+            message="查詢完成",
+            results=results
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"查詢失敗: {str(e)}"
+        )
+
+@app.post("/mbti/create_vector_store/", tags=["MBTI資料存儲"])
+async def create_new_vector_store(file: UploadFile = File(...)):
+    """
+    從 CSV 檔案建立新的向量存儲
+    
+    - **file**: CSV 格式的 MBTI 數據檔案
+    """
+    try:
+        # 儲存上傳的檔案
+        csv_dir = "mbti_data/csv"
+        os.makedirs(csv_dir, exist_ok=True)
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        csv_filename = f"mbti_browser_{timestamp}.csv"
+        csv_path = os.path.join(csv_dir, csv_filename)
+        
+        # 寫入檔案
+        with open(csv_path, "wb") as f:
+            contents = await file.read()
+            f.write(contents)
+            
+        # 建立向量存儲
+        result = create_vector_store(csv_path)
+        
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "success",
+                "message": "向量存儲建立完成",
+                "details": result
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"建立向量存儲失敗: {str(e)}"
+        )
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    uvicorn.run(app, host="0.0.0.0", port=8500) 

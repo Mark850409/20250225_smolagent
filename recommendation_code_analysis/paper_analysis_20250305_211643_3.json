@@ -1,0 +1,13 @@
+{
+  "paper_info": {
+    "title": "Surprise: A Python library for recommender systems",
+    "authors": [
+      "N Hug"
+    ],
+    "year": "",
+    "abstract": "For example, a video streaming service will typically rely on a recommender system to propose   can also implement their own recommendation technique with a minimal amount of code.",
+    "url": "https://joss.theoj.org/papers/10.21105/joss.02174.pdf",
+    "source": "Google Scholar"
+  },
+  "analysis": "Error in generating final LLM output:\n402 Client Error: Payment Required for url: https://router.huggingface.co/hf-inference/models/Qwen/Qwen2.5-Coder-32B-Instruct/v1/chat/completions (Request ID: Root=1-67c84ebe-16dd35d256929cb44b189d3f;246a78fe-8144-40f0-9f29-c52022e70fdf)\n\nYou have exceeded your monthly included credits for Inference Providers. Subscribe to PRO to get 20x more monthly allowance."
+}

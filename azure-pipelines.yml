@@ -146,7 +146,7 @@ stages:
           az webapp config container set \
             --resource-group $(resourceGroupName) \
             --name $(webAppName) \
-            --docker-registry-server-url https://$(ACR_LOGIN_SERVER) \
+            --docker-registry-server-url $(ACR_LOGIN_SERVER) \
             --docker-registry-server-user $(ACR_USERNAME) \
             --docker-registry-server-password $(ACR_PASSWORD)
             

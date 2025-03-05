@@ -1,0 +1,13 @@
+{
+  "paper_info": {
+    "title": "Hands-on recommendation systems with Python: start building powerful and personalized, recommendation engines with Python",
+    "authors": [
+      "R Banik"
+    ],
+    "year": "",
+    "abstract": "of choice in Python. This, in turn, will aid us in building the various recommender systems  we've introduced.  We will discuss this point in greater detail when we implement this in code.",
+    "url": "https://books.google.com/books?hl=en&lr=&id=BglnDwAAQBAJ&oi=fnd&pg=PP1&dq=recommendation+system+implementation+python+code&ots=2Ca0CTIP89&sig=CrYZMLVf1fIkQMkxp_We5x3lwwk",
+    "source": "Google Scholar"
+  },
+  "analysis": "Error in generating final LLM output:\n402 Client Error: Payment Required for url: https://router.huggingface.co/hf-inference/models/Qwen/Qwen2.5-Coder-32B-Instruct/v1/chat/completions (Request ID: Root=1-67c84ebc-5ef4a9666a36c20055ee10da;438063c0-d644-43b1-9e9c-0eff1bdf505b)\n\nYou have exceeded your monthly included credits for Inference Providers. Subscribe to PRO to get 20x more monthly allowance."
+}

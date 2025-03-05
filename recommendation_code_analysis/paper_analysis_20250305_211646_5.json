@@ -1,0 +1,13 @@
+{
+  "paper_info": {
+    "title": "Book recommendation system development using user-based collaborative filtering",
+    "authors": [
+      "M Hikmatyar"
+    ],
+    "year": "",
+    "abstract": "in a desktop-based library using the Python programming language and the MySQL  the  implementation or making coding. Implementation of a book search recommendation system to",
+    "url": "https://iopscience.iop.org/article/10.1088/1742-6596/1477/3/032024/meta",
+    "source": "Google Scholar"
+  },
+  "analysis": "Error in generating final LLM output:\n402 Client Error: Payment Required for url: https://router.huggingface.co/hf-inference/models/Qwen/Qwen2.5-Coder-32B-Instruct/v1/chat/completions (Request ID: Root=1-67c84ec1-564607e81ca3dec73ffb2196;89b7e03a-1b0d-417c-a565-a6e9112e09cb)\n\nYou have exceeded your monthly included credits for Inference Providers. Subscribe to PRO to get 20x more monthly allowance."
+}

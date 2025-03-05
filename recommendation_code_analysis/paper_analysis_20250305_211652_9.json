@@ -1,0 +1,13 @@
+{
+  "paper_info": {
+    "title": "LensKit for Python: Next-Generation Software for Recommender System Experiments",
+    "authors": [
+      "Michael D. Ekstrand"
+    ],
+    "year": 2018,
+    "abstract": "LensKit is an open-source toolkit for building, researching, and learning\nabout recommender systems. First released in 2010 as a Java framework, it has\nsupported diverse published research, small-scale production deployments, and\neducation in both MOOC and traditional classroom settings. In this paper, I\npresent the next generation of the LensKit project, re-envisioning the original\ntool's objectives as flexible Python package for supporting recommender systems\nresearch and development. LensKit for Python (LKPY) enables researchers and\nstudents to build robust, flexible, and reproducible experiments that make use\nof the large and growing PyData and Scientific Python ecosystem, including\nscikit-learn, TensorFlow, and PyTorch. To that end, it provides classical\ncollaborative filtering implementations, recommender system evaluation metrics,\ndata preparation routines, and tools for efficiently batch running\nrecommendation algorithms, all usable in any combination with each other or\nwith other Python software.\n  This paper describes the design goals, use cases, and capabilities of LKPY,\ncontextualized in a reflection on the successes and failures of the original\nLensKit for Java software.",
+    "url": "http://arxiv.org/pdf/1809.03125v4",
+    "source": "arXiv"
+  },
+  "analysis": "Error in generating final LLM output:\n402 Client Error: Payment Required for url: https://router.huggingface.co/hf-inference/models/Qwen/Qwen2.5-Coder-32B-Instruct/v1/chat/completions (Request ID: Root=1-67c84ec7-06b1b1ac422b5fb3270a47e3;ca3f21d2-fdcd-4880-af0d-7d3d0fac3d94)\n\nYou have exceeded your monthly included credits for Inference Providers. Subscribe to PRO to get 20x more monthly allowance."
+}

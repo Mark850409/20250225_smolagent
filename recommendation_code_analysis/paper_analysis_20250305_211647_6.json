@@ -1,0 +1,14 @@
+{
+  "paper_info": {
+    "title": "LabVIEW is faster and C is economical interfacing tool for UCT automation",
+    "authors": [
+      "Ankur Kumar",
+      "Mayank Goswami"
+    ],
+    "year": 2022,
+    "abstract": "An in-house developed 2D ultrasound computerized Tomography system is fully\nautomated. Performance analysis of instrument and software interfacing soft\ntools, namely the LabVIEW, MATLAB, C, and Python, is presented. The instrument\ninterfacing algorithms, hardware control algorithms, signal processing, and\nanalysis codes are written using above mentioned soft tool platforms. Total of\neight performance indices are used to compare the ease of (a) realtime control\nof electromechanical assembly, (b) sensors, instruments integration, (c)\nsynchronized data acquisition, and (d) simultaneous raw data processing. It is\nfound that C utilizes the least processing power and performs a lower number of\nprocesses to perform the same task. In runtime analysis (data acquisition and\nrealtime control), LabVIEW performs best, taking 365.69s in comparison to\nMATLAB (623.83s), Python ( 1505.54s), and C (1252.03s) to complete the\nexperiment. Python performs better in establishing faster interfacing and\nminimum RAM usage. LabVIEW is recommended for its fast process execution. C is\nrecommended for the most economical implementation. Python is recommended for\ncomplex system automation having a very large number of components involved.\nThis article provides a methodology to select optimal soft tools for instrument\nautomation-related aspects.",
+    "url": "http://arxiv.org/pdf/2205.08260v1",
+    "source": "arXiv"
+  },
+  "analysis": "Error in generating final LLM output:\n402 Client Error: Payment Required for url: https://router.huggingface.co/hf-inference/models/Qwen/Qwen2.5-Coder-32B-Instruct/v1/chat/completions (Request ID: Root=1-67c84ec2-64aeb52a3e10cb21001855ad;9c93fc83-56d7-4985-a20a-d4d90f4a3651)\n\nYou have exceeded your monthly included credits for Inference Providers. Subscribe to PRO to get 20x more monthly allowance."
+}

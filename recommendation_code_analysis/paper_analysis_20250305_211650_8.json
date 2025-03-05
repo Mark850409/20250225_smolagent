@@ -1,0 +1,14 @@
+{
+  "paper_info": {
+    "title": "A Data Set of Generalizable Python Code Change Patterns",
+    "authors": [
+      "Akalanka Galappaththi",
+      "Sarah Nadi"
+    ],
+    "year": 2023,
+    "abstract": "Mining repetitive code changes from version control history is a common way\nof discovering unknown change patterns. Such change patterns can be used in\ncode recommender systems or automated program repair techniques. While there\nare such tools and datasets exist for Java, there is little work on finding and\nrecommending such changes in Python. In this paper, we present a data set of\nmanually vetted generalizable Python repetitive code change patterns. We create\na coding guideline to identify generalizable change patterns that can be used\nin automated tooling. We leverage the mined change patterns from recent work\nthat mines repetitive changes in Python projects and use our coding guideline\nto manually review the patterns. For each change, we also record a description\nof the change and why it is applied along with other characteristics such as\nthe number of projects it occurs in. This review process allows us to identify\nand share 72 Python change patterns that can be used to build and advance\nPython developer support tools.",
+    "url": "http://arxiv.org/pdf/2304.04983v1",
+    "source": "arXiv"
+  },
+  "analysis": "Error in generating final LLM output:\n402 Client Error: Payment Required for url: https://router.huggingface.co/hf-inference/models/Qwen/Qwen2.5-Coder-32B-Instruct/v1/chat/completions (Request ID: Root=1-67c84ec5-36d3508b613f02c953fef222;0828d3de-e74b-4b49-8eeb-51f0c8b36223)\n\nYou have exceeded your monthly included credits for Inference Providers. Subscribe to PRO to get 20x more monthly allowance."
+}

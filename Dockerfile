@@ -29,4 +29,4 @@ ENV HOST=0.0.0.0
 EXPOSE 5000
 
 # 啟動應用
-CMD ["python", "mbti_analysis_api.py"] 
+CMD ["python", "mbti_browser_gradio.py"] 

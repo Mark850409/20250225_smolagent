@@ -1,0 +1,16 @@
+{
+  "paper_info": {
+    "title": "Applied Recommender Systems with Python",
+    "authors": [
+      "A Kulkarni",
+      "A Shivananda",
+      "A Kulkarni",
+      "VA Krishnan"
+    ],
+    "year": "",
+    "abstract": "The code for the implementations in each chapter and the required datasets are available   rule-based recommender system in this chapter before proceeding to the implementation in",
+    "url": "https://link.springer.com/content/pdf/10.1007/978-1-4842-8954-9.pdf",
+    "source": "Google Scholar"
+  },
+  "analysis": "Error in generating final LLM output:\n402 Client Error: Payment Required for url: https://router.huggingface.co/hf-inference/models/Qwen/Qwen2.5-Coder-32B-Instruct/v1/chat/completions (Request ID: Root=1-67c84ebf-0b729823725dc07f36ea8330;d1d45183-c4b0-4cdf-bd3d-311446e32632)\n\nYou have exceeded your monthly included credits for Inference Providers. Subscribe to PRO to get 20x more monthly allowance."
+}

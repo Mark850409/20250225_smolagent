@@ -1,0 +1,17 @@
+{
+  "paper_info": {
+    "title": "DeepRec: An Open-source Toolkit for Deep Learning based Recommendation",
+    "authors": [
+      "Shuai Zhang",
+      "Yi Tay",
+      "Lina Yao",
+      "Bin Wu",
+      "Aixin Sun"
+    ],
+    "year": 2019,
+    "abstract": "Deep learning based recommender systems have been extensively explored in\nrecent years. However, the large number of models proposed each year poses a\nbig challenge for both researchers and practitioners in reproducing the results\nfor further comparisons. Although a portion of papers provides source code,\nthey adopted different programming languages or different deep learning\npackages, which also raises the bar in grasping the ideas. To alleviate this\nproblem, we released the open source project: \\textbf{DeepRec}. In this\ntoolkit, we have implemented a number of deep learning based recommendation\nalgorithms using Python and the widely used deep learning package - Tensorflow.\nThree major recommendation scenarios: rating prediction, top-N recommendation\n(item ranking) and sequential recommendation, were considered. Meanwhile,\nDeepRec maintains good modularity and extensibility to easily incorporate new\nmodels into the framework. It is distributed under the terms of the GNU General\nPublic License. The source code is available at github:\n\\url{https://github.com/cheungdaven/DeepRec}",
+    "url": "http://arxiv.org/pdf/1905.10536v1",
+    "source": "arXiv"
+  },
+  "analysis": "Error in generating final LLM output:\n402 Client Error: Payment Required for url: https://router.huggingface.co/hf-inference/models/Qwen/Qwen2.5-Coder-32B-Instruct/v1/chat/completions (Request ID: Root=1-67c84ec4-59657cda25fdf2181496521b;c98eb94a-26a1-419c-89da-872f7502ff1a)\n\nYou have exceeded your monthly included credits for Inference Providers. Subscribe to PRO to get 20x more monthly allowance."
+}
