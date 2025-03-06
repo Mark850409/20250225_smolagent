@@ -130,9 +130,9 @@ stages:
 
 - stage: Deploy
   displayName: 'Deploy to Azure Web App'
-  dependsOn: 
-  - Infrastructure
-  - Build
+  # dependsOn: 
+  # - Infrastructure
+  # - Build
   variables:
     ACR_USERNAME: $[ stageDependencies.Infrastructure.CreateInfrastructure.outputs['SetACRVariables.ACR_USERNAME'] ]
     ACR_PASSWORD: $[ stageDependencies.Infrastructure.CreateInfrastructure.outputs['SetACRVariables.ACR_PASSWORD'] ]
