@@ -32,17 +32,17 @@ def index():
         
         for directory in required_dirs:
             os.makedirs(directory, exist_ok=True)
-        # 啟動 Gradio 介面
-        web_ui.launch(
-            server_name="0.0.0.0",
-            server_port=int(os.getenv("PORT", 7860)),
-            share=False,
-            debug=False
-        )
+        
         
         return "MBTI 分析工具已啟動"
     except Exception as e:
         return f"啟動失敗: {str(e)}", 500
 
 if __name__ == "__main__":
-    app.run(debug=True, port=os.getenv("PORT", default=5000), host='0.0.0.0')
+    # 啟動 Gradio 介面
+    web_ui.launch(
+        server_name="0.0.0.0",
+        server_port=int(os.getenv("PORT", 5000)),
+        share=False,
+        debug=False
+    )

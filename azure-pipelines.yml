@@ -18,22 +18,32 @@ resources:
 
 variables: 
   - group: mbti-analyzer-variables  # 引入變數群組
-  - name: azureServiceConnection  # Azure 服務連接名稱
-    value: 'acrmbtianlyzer.azurecr.io'    # 使用完整的 ACR 登入伺服器名稱
-  - name: projectName  # 專案設定
+  - name: azureServiceConnectionName
+    value: 'rg-mbti-analyzer'
+  - name: azureServiceConnection  
+    value: 'acrmbtianlyzer.azurecr.io'    
+  - name: projectName  
     value: 'mbti-analyzer'
   - name: pythonVersion
     value: '3.9'
   
   # Azure 資源設定
   - name: resourceGroupName
-    value: 'AIChatBot'  # 根據截圖中的資源群組
+    value: 'AIChatBot'  
   - name: location
     value: 'eastasia'
   - name: acrName
-    value: 'acrmbtianlyzer'  # ACR 名稱必須是全域唯一的
+    value: 'acrmbtianlyzer'  
   - name: webAppName
     value: 'app-mbti-analyzer'
+  - name: appServicePlanName
+    value: 'asp-mbti-analyzer'
+  - name: appServicePlanSku
+    value: 'F1'  # 使用免費層級
+  - name: storageAccountName
+    value: 'stmbtianlyzer'
+  - name: storageAccountSku
+    value: 'Standard_LRS'  # 使用標準本地冗餘存儲
   
   # Docker 映像設定
   - name: imageRepository
@@ -43,7 +53,7 @@ variables:
   - name: tag
     value: '$(Build.BuildId)'
   - name: dockerRegistryServiceConnection
-    value: 'azureServiceConnection'  # 新增 Docker 登錄服務連接名稱
+    value: 'azureServiceConnection'
 
 stages:
 - stage: Infrastructure
@@ -54,9 +64,9 @@ stages:
       vmImage: 'ubuntu-latest'
     steps:
     - task: AzureCLI@2
-      name: SetACRVariables  # 添加名稱以便後續參考
+      name: SetACRVariables
       inputs:
-        azureSubscription: 'rg-mbti-analyzer'
+        azureSubscription: '$(azureServiceConnectionName)'  # 使用變數
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
@@ -124,25 +134,45 @@ stages:
     steps:
     - task: AzureCLI@2
       inputs:
-        azureSubscription: 'rg-mbti-analyzer'
+        azureSubscription: '$(azureServiceConnectionName)'
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          # 建立 App Service Plan
-          az appservice plan create \
-            --name asp-$(webAppName) \
+          # 建立 Storage Account
+          echo "Creating Storage Account..."
+          az storage account create \
+            --name $(storageAccountName) \
             --resource-group $(resourceGroupName) \
-            --sku F1 \
+            --sku $(storageAccountSku) \
+            --kind StorageV2 \
+            --location $(location)
+          
+          # 獲取存儲帳戶連接字串
+          echo "Getting Storage Account connection string..."
+          STORAGE_CONNECTION_STRING=$(az storage account show-connection-string \
+            --name $(storageAccountName) \
+            --resource-group $(resourceGroupName) \
+            --query connectionString \
+            --output tsv)
+          
+          # 建立 App Service Plan (使用 F1 免費層級)
+          echo "Creating App Service Plan..."
+          az appservice plan create \
+            --name $(appServicePlanName) \
+            --resource-group $(resourceGroupName) \
+            --sku $(appServicePlanSku) \
             --is-linux
           
           # 建立 Web App
+          echo "Creating Web App..."
           az webapp create \
             --resource-group $(resourceGroupName) \
-            --plan asp-$(webAppName) \
+            --plan $(appServicePlanName) \
             --name $(webAppName) \
             --deployment-container-image-name $(ACR_LOGIN_SERVER)/$(imageRepository):latest
           
           # 設定 ACR 認證
+          echo "Configuring ACR credentials..."
           az webapp config container set \
             --resource-group $(resourceGroupName) \
             --name $(webAppName) \
@@ -151,12 +181,15 @@ stages:
             --docker-registry-server-password $(ACR_PASSWORD)
             
           # 設定環境變數
+          echo "Configuring environment variables..."
           az webapp config appsettings set \
             --resource-group $(resourceGroupName) \
             --name $(webAppName) \
             --settings \
-            WEBSITES_PORT=5000 \
+            WEBSITES_PORT=$(WEBSITES_PORT) \
             EMBEDDING_MODEL_NAME="$(EMBEDDING_MODEL_NAME)" \
             HUGGINGFACE_API_KEY="$(HUGGINGFACE_API_KEY)" \
             HUGGINGFACE_MODEL="$(HUGGINGFACE_MODEL)" \
-            SERP_API_KEY="$(SERP_API_KEY)"
+            SERP_API_KEY="$(SERP_API_KEY)" \
+            TAVILY_API_KEY="$(TAVILY_API_KEY)" \
+            AZURE_STORAGE_CONNECTION_STRING="$STORAGE_CONNECTION_STRING"
