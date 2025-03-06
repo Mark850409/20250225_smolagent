@@ -137,3 +137,35 @@ python mbti_browser_gradio.py
 
 ## 八、授權
 MIT License
+
+## 九、Azure DevOps 部署相關指令
+
+# 列出所有可用的訂閱
+```bash
+az account list --output table
+
+# 切換到正確的訂閱
+az account set --subscription "Azure for Students"
+
+# 列出當前用戶的訂閱ID
+az account list --query "[?isDefault].id" -o tsv
+
+
+# 獲取當前登入的服務主體 ID
+CURRENT_SP_ID=$(az ad signed-in-user show --query id -o tsv)
+
+# 建立倉庫拉取、推送權限
+az role assignment create \
+--assignee $(az ad signed-in-user show --query id -o tsv) \
+--role AcrPull \
+--scope /subscriptions/$(az account show --query "id" -o tsv)/resourceGroups/AIChatBot/providers/Microsoft.ContainerRegistry/registries/acrmbtianlyzer
+
+az role assignment create \
+--assignee $(az ad signed-in-user show --query id -o tsv) \
+--role AcrPush \
+--scope /subscriptions/$(az account show --query "id" -o tsv)/resourceGroups/AIChatBot/providers/Microsoft.ContainerRegistry/registries/acrmbtianlyzer
+
+
+# 列出指定倉庫下所有權限
+az role assignment list --assignee $(az ad signed-in-user show --query id -o tsv) --scope /subscriptions/$(az account show --query "id" -o tsv)/resourceGroups/AIChatBot/providers/Microsoft.ContainerRegistry/registries/acrmbtianlyzer --query "[].roleDefinitionName" -o table
+```

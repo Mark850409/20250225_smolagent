@@ -18,30 +18,22 @@ resources:
 
 variables: 
   - group: mbti-analyzer-variables  # 引入變數群組
-  - name: azureServiceConnectionName
-    value: 'rg-mbti-analyzer'
-  - name: projectName  
+  - name: azureServiceConnection  # Azure 服務連接名稱
+    value: 'acrmbtianlyzer.azurecr.io'    # 使用完整的 ACR 登入伺服器名稱
+  - name: projectName  # 專案設定
     value: 'mbti-analyzer'
   - name: pythonVersion
     value: '3.9'
   
   # Azure 資源設定
   - name: resourceGroupName
-    value: 'AIChatBot'  
+    value: 'AIChatBot'  # 根據截圖中的資源群組
   - name: location
     value: 'eastasia'
   - name: acrName
-    value: 'acrmbtianlyzer'  
+    value: 'acrmbtianlyzer'  # ACR 名稱必須是全域唯一的
   - name: webAppName
     value: 'app-mbti-analyzer'
-  - name: appServicePlanName
-    value: 'asp-mbti-analyzer'
-  - name: appServicePlanSku
-    value: 'F1'  # 使用免費層級
-  - name: storageAccountName
-    value: 'stmbtianlyzer'
-  - name: storageAccountSku
-    value: 'Standard_LRS'  # 使用標準本地冗餘存儲
   
   # Docker 映像設定
   - name: imageRepository
@@ -51,7 +43,7 @@ variables:
   - name: tag
     value: '$(Build.BuildId)'
   - name: dockerRegistryServiceConnection
-    value: 'acr-mbti-analyzer'  # 這應該是在 Azure DevOps 中設定的 ACR 服務連接名稱
+    value: 'acr-mbti-analyzer'  # 新增 Docker 登錄服務連接名稱
 
 stages:
 - stage: Infrastructure
@@ -61,41 +53,15 @@ stages:
     pool:
       vmImage: 'ubuntu-latest'
     steps:
-    # 建立資源組（如果不存在）
     - task: AzureCLI@2
-      displayName: 'Create Resource Group'
+      name: SetACRVariables  # 添加名稱以便後續參考
       inputs:
-        azureSubscription: '$(azureServiceConnectionName)'
+        azureSubscription: 'rg-mbti-analyzer'
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          # 檢查資源群組是否存在
-          if [ "$(az group exists --name $(resourceGroupName))" = "false" ]; then
-            echo "Creating resource group: $(resourceGroupName)..."
-            az group create --name $(resourceGroupName) --location $(location)
-          else
-            echo "Resource group $(resourceGroupName) already exists. Skipping creation."
-          fi
-    - task: AzureCLI@2
-      name: SetACRVariables
-      inputs:
-        azureSubscription: '$(azureServiceConnectionName)'  # 使用變數
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          # 檢查 ACR 是否存在
-          if ! az acr show --name $(acrName) --resource-group $(resourceGroupName) &>/dev/null; then
-            echo "Creating ACR..."
-            az acr create \
-              --resource-group $(resourceGroupName) \
-              --name $(acrName) \
-              --sku Basic \
-              --admin-enabled true
-          else
-            # 確保現有的 ACR 啟用了 admin
-            echo "Enabling admin access for existing ACR..."
-            az acr update --name $(acrName) --admin-enabled true
-          fi
+          # 建立資源群組
+          az group create --name $(resourceGroupName) --location $(location)
           
           # 建立 Container Registry
           az acr create \
@@ -104,16 +70,15 @@ stages:
             --sku Basic \
             --admin-enabled true
           
-          # 獲取 ACR 登入資訊
-          ACR_LOGIN_SERVER=$(az acr show --name $(acrName) --resource-group $(resourceGroupName) --query loginServer -o tsv)
-          ACR_USERNAME=$(az acr credential show --name $(acrName) --resource-group $(resourceGroupName) --query username -o tsv)
-          ACR_PASSWORD=$(az acr credential show --name $(acrName) --resource-group $(resourceGroupName) --query "passwords[0].value" -o tsv)
+          # 取得 ACR 登入資訊並設定為輸出變數
+          ACR_USERNAME=$(az acr credential show -n $(acrName) --query "username" -o tsv)
+          ACR_PASSWORD=$(az acr credential show -n $(acrName) --query "passwords[0].value" -o tsv)
+          ACR_LOGIN_SERVER=$(acrName).azurecr.io
           
           # 設定 pipeline 變數
-          echo "##vso[task.setvariable variable=REGISTRY_NAME;isOutput=true]$ACR_LOGIN_SERVER"
           echo "##vso[task.setvariable variable=ACR_USERNAME;isOutput=true]$ACR_USERNAME"
-          echo "##vso[task.setvariable variable=ACR_PASSWORD;isOutput=true;issecret=true]$ACR_PASSWORD"
-
+          echo "##vso[task.setvariable variable=ACR_PASSWORD;isOutput=true]$ACR_PASSWORD"
+          echo "##vso[task.setvariable variable=ACR_LOGIN_SERVER;isOutput=true]$ACR_LOGIN_SERVER"
 
 - stage: Build
   displayName: 'Build and Push Docker Image'
@@ -126,14 +91,14 @@ stages:
     # 登入 ACR
     - task: Docker@2
       inputs:
-        containerRegistry: '$(dockerRegistryServiceConnection)'  # 使用 Docker Registry 服務連接
+        containerRegistry: '$(dockerRegistryServiceConnection)'
         command: 'login'
       displayName: 'Login to ACR'
 
     # 建立並推送 Docker 映像
     - task: Docker@2
       inputs:
-        containerRegistry: '$(dockerRegistryServiceConnection)'  # 使用 Docker Registry 服務連接
+        containerRegistry: '$(dockerRegistryServiceConnection)'
         repository: '$(imageRepository)'
         command: 'buildAndPush'
         Dockerfile: '$(dockerfilePath)'
@@ -159,45 +124,25 @@ stages:
     steps:
     - task: AzureCLI@2
       inputs:
-        azureSubscription: '$(azureServiceConnectionName)'
+        azureSubscription: 'rg-mbti-analyzer'
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          # 建立 Storage Account
-          echo "Creating Storage Account..."
-          az storage account create \
-            --name $(storageAccountName) \
-            --resource-group $(resourceGroupName) \
-            --sku $(storageAccountSku) \
-            --kind StorageV2 \
-            --location $(location)
-          
-          # 獲取存儲帳戶連接字串
-          echo "Getting Storage Account connection string..."
-          STORAGE_CONNECTION_STRING=$(az storage account show-connection-string \
-            --name $(storageAccountName) \
-            --resource-group $(resourceGroupName) \
-            --query connectionString \
-            --output tsv)
-          
-          # 建立 App Service Plan (使用 F1 免費層級)
-          echo "Creating App Service Plan..."
+          # 建立 App Service Plan
           az appservice plan create \
-            --name $(appServicePlanName) \
+            --name asp-$(webAppName) \
             --resource-group $(resourceGroupName) \
-            --sku $(appServicePlanSku) \
+            --sku F1 \
             --is-linux
           
           # 建立 Web App
-          echo "Creating Web App..."
           az webapp create \
             --resource-group $(resourceGroupName) \
-            --plan $(appServicePlanName) \
+            --plan asp-$(webAppName) \
             --name $(webAppName) \
             --deployment-container-image-name $(ACR_LOGIN_SERVER)/$(imageRepository):latest
           
           # 設定 ACR 認證
-          echo "Configuring ACR credentials..."
           az webapp config container set \
             --resource-group $(resourceGroupName) \
             --name $(webAppName) \
@@ -206,15 +151,12 @@ stages:
             --docker-registry-server-password $(ACR_PASSWORD)
             
           # 設定環境變數
-          echo "Configuring environment variables..."
           az webapp config appsettings set \
             --resource-group $(resourceGroupName) \
             --name $(webAppName) \
             --settings \
-            WEBSITES_PORT=$(WEBSITES_PORT) \
+            WEBSITES_PORT=5000 \
             EMBEDDING_MODEL_NAME="$(EMBEDDING_MODEL_NAME)" \
             HUGGINGFACE_API_KEY="$(HUGGINGFACE_API_KEY)" \
             HUGGINGFACE_MODEL="$(HUGGINGFACE_MODEL)" \
-            SERP_API_KEY="$(SERP_API_KEY)" \
-            TAVILY_API_KEY="$(TAVILY_API_KEY)" \
-            AZURE_STORAGE_CONNECTION_STRING="$STORAGE_CONNECTION_STRING"
+            SERP_API_KEY="$(SERP_API_KEY)"
