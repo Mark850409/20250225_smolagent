@@ -60,15 +60,27 @@ stages:
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          # 建立資源群組
-          az group create --name $(resourceGroupName) --location $(location)
+          # 檢查資源群組是否存在
+          if [ "$(az group exists --name $(resourceGroupName))" = "false" ]; then
+            echo "Creating resource group: $(resourceGroupName)..."
+            az group create --name $(resourceGroupName) --location $(location)
+          else
+            echo "Resource group $(resourceGroupName) already exists. Skipping creation."
+          fi
           
-          # 建立 Container Registry
-          az acr create \
-            --resource-group $(resourceGroupName) \
-            --name $(acrName) \
-            --sku Basic \
-            --admin-enabled true
+          # 檢查 ACR 是否存在
+          if ! az acr show --name $(acrName) --resource-group $(resourceGroupName) &>/dev/null; then
+            echo "Creating ACR..."
+            az acr create \
+              --resource-group $(resourceGroupName) \
+              --name $(acrName) \
+              --sku Basic \
+              --admin-enabled true
+          else
+            # 確保現有的 ACR 啟用了 admin
+            echo "Enabling admin access for existing ACR..."
+            az acr update --name $(acrName) --admin-enabled true
+          fi
           
           # 取得 ACR 登入資訊並設定為輸出變數
           ACR_USERNAME=$(az acr credential show -n $(acrName) --query "username" -o tsv)
@@ -96,17 +108,13 @@ stages:
       displayName: 'Login to ACR'
 
     # 建立並推送 Docker 映像
-    - task: Docker@2
+    - task: Bash@3
+      displayName: 'Build and Push Frontend Image'
       inputs:
-        containerRegistry: '$(dockerRegistryServiceConnection)'
-        repository: '$(imageRepository)'
-        command: 'buildAndPush'
-        Dockerfile: '$(dockerfilePath)'
-        buildContext: '$(Build.SourcesDirectory)'
-        tags: |
-          $(Build.BuildId)
-          latest
-      displayName: 'Build and Push Docker Image'
+        targetType: 'inline'
+        script: |
+          docker build -t $(acrName).azurecr.io/$(imageRepository):$(tag) .
+          docker push $(acrName).azurecr.io/$(imageRepository):$(tag)
 
 - stage: Deploy
   displayName: 'Deploy to Azure Web App'
@@ -128,21 +136,41 @@ stages:
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          # 建立 App Service Plan
-          az appservice plan create \
-            --name asp-$(webAppName) \
+          # 建立 Storage Account
+          echo "Creating Storage Account..."
+          az storage account create \
+            --name $(storageAccountName) \
             --resource-group $(resourceGroupName) \
-            --sku F1 \
+            --sku $(storageAccountSku) \
+            --kind StorageV2 \
+            --location $(location)
+          
+          # 獲取存儲帳戶連接字串
+          echo "Getting Storage Account connection string..."
+          STORAGE_CONNECTION_STRING=$(az storage account show-connection-string \
+            --name $(storageAccountName) \
+            --resource-group $(resourceGroupName) \
+            --query connectionString \
+            --output tsv)
+          
+          # 建立 App Service Plan (使用 F1 免費層級)
+          echo "Creating App Service Plan..."
+          az appservice plan create \
+            --name $(appServicePlanName) \
+            --resource-group $(resourceGroupName) \
+            --sku $(appServicePlanSku) \
             --is-linux
           
           # 建立 Web App
+          echo "Creating Web App..."
           az webapp create \
             --resource-group $(resourceGroupName) \
-            --plan asp-$(webAppName) \
+            --plan $(appServicePlanName) \
             --name $(webAppName) \
             --deployment-container-image-name $(ACR_LOGIN_SERVER)/$(imageRepository):latest
           
           # 設定 ACR 認證
+          echo "Configuring ACR credentials..."
           az webapp config container set \
             --resource-group $(resourceGroupName) \
             --name $(webAppName) \
@@ -151,12 +179,15 @@ stages:
             --docker-registry-server-password $(ACR_PASSWORD)
             
           # 設定環境變數
+          echo "Configuring environment variables..."
           az webapp config appsettings set \
             --resource-group $(resourceGroupName) \
             --name $(webAppName) \
             --settings \
-            WEBSITES_PORT=5000 \
+            WEBSITES_PORT=$(WEBSITES_PORT) \
             EMBEDDING_MODEL_NAME="$(EMBEDDING_MODEL_NAME)" \
             HUGGINGFACE_API_KEY="$(HUGGINGFACE_API_KEY)" \
             HUGGINGFACE_MODEL="$(HUGGINGFACE_MODEL)" \
-            SERP_API_KEY="$(SERP_API_KEY)"
+            SERP_API_KEY="$(SERP_API_KEY)" \
+            TAVILY_API_KEY="$(TAVILY_API_KEY)" \
+            AZURE_STORAGE_CONNECTION_STRING="$STORAGE_CONNECTION_STRING"
