@@ -13,6 +13,7 @@ venv/
 *.pyc
 backend/__pycache__/
 backend/**/__pycache__/
+.venv/
 
 # IDE specific files
 .idea

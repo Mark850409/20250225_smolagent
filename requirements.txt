@@ -1,5 +1,7 @@
-# 核心功能
+﻿# 核心功能
 flask
+flask-openapi3
+pydantic
 werkzeug
 gradio
 playwright
@@ -7,6 +9,7 @@ langchain
 langchain-community
 pandas
 python-dotenv
+
 # AI 模型和代理
 smolagents
 huggingface-hub
@@ -23,3 +26,8 @@ beautifulsoup4
 pillow
 tavily-python
 faiss-cpu
+google-search-results
+
+# FastAPI
+fastapi
+uvicorn[standard]

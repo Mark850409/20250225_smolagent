@@ -1,4 +1,4 @@
-from smolagents import ToolCallingAgent, HfApiModel, tool
+from smolagents import ToolCallingAgent, HfApiModel, LiteLLMModel,tool
 from playwright.async_api import async_playwright
 from llm_model.models import ModelFactory
 import pandas as pd
@@ -18,15 +18,36 @@ load_dotenv()
 # 初始化模型工廠
 model_factory = ModelFactory()
 
-# 初始化 HuggingFace 模型
-hf_provider = ModelFactory.create_provider(
-    "huggingface", 
-    os.getenv('HUGGINGFACE_MODEL')
-)
+# 初始化 Gemini 模型
+gemini_provider = ModelFactory.create_provider("gemini", "gemini/gemini-2.0-flash-exp")
 
 # 初始化繁簡轉換器
 cc = OpenCC('s2t')  # 簡體轉繁體
 
+# 初始化系統提示詞
+messages = [
+    {
+        "role": "system",
+        "content": """
+你是一個專業的 MBTI 性格分析專家，負責分析和解釋 MBTI 相關數據。
+請注意以下要求：
+1. 所有回應必須使用繁體中文
+2. 分析結果需要包含：
+   - 數據收集概況
+   - 各 MBTI 類型的分布情況
+   - 職業傾向分析
+   - 文化背景分析
+   - 年齡分布分析
+3. 提供具體的數據支持，包含百分比
+4. 對特殊趨勢提出專業見解
+5. 建議使用條列式呈現重要發現
+"""
+    }
+]
+
+# 初始化模型
+model = LiteLLMModel(model_id="gemini/gemini-2.0-flash-exp",
+                     api_key=os.getenv("GEMINI_API_KEY"))
 
 @tool
 def browse_webpage(url: str) -> str:
@@ -122,65 +143,72 @@ def extract_mbti_info(content: str) -> dict:
         "特色", "優勢", "適合", "傾向"
     ]
     
-    # 為每個 MBTI 類型處理內容
-    for mbti_type in mbti_types:
-        current_paragraph = ""
-        type_keywords = [
-            mbti_type,
-            f"{mbti_type}型",
-            f"{mbti_type}人格",
-            f"{mbti_type}性格"
-        ]
+    current_type = None
+    current_description = []
+    
+    for para in paragraphs:
+        # 檢查段落是否包含 MBTI 類型
+        found_types = [t for t in mbti_types if t in para]
         
-        for para in paragraphs:
-            # 檢查段落是否包含當前 MBTI 類型或相關關鍵詞
-            is_relevant = (
-                any(type_kw in para for type_kw in type_keywords) or
-                any(keyword in para for keyword in keywords)
-            )
+        if found_types:
+            # 如果找到新的類型，先保存之前的資料
+            if current_type and current_description:
+                description = " ".join(current_description)
+                
+                # 尋找職業關鍵詞
+                found_occupations = []
+                for occupation in occupations:
+                    if occupation in description:
+                        found_occupations.append(occupation)
+                
+                # 如果沒找到特定職業，設為"其他"
+                if not found_occupations:
+                    found_occupations = ["其他"]
+                
+                # 為每個找到的職業添加一條記錄
+                for occupation in found_occupations:
+                    mbti_data["personality_type"].append(current_type)
+                    mbti_data["occupation"].append(occupation)
+                    mbti_data["description"].append(description)
+                    mbti_data["source_url"].append("current_url")
+                    mbti_data["extracted_date"].append(
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    )
             
-            if is_relevant:
-                current_paragraph = current_paragraph + " " + para if current_paragraph else para
-            else:
-                if current_paragraph:
-                    # 處理累積的段落
-                    if any(type_kw in current_paragraph for type_kw in type_keywords):
-                        description = cc.convert(current_paragraph.strip())
-                        
-                        # 尋找職業關鍵詞
-                        found_occupations = []
-                        for occupation in occupations:
-                            if occupation in description:
-                                found_occupations.append(occupation)
-                        
-                        # 如果沒找到特定職業，設為"其他"
-                        if not found_occupations:
-                            found_occupations = ["其他"]
-                        
-                        # 為每個找到的職業添加一條記錄
-                        for occupation in found_occupations:
-                            mbti_data["personality_type"].append(mbti_type)
-                            mbti_data["occupation"].append(occupation)
-                            mbti_data["description"].append(description)
-                            mbti_data["source_url"].append("current_url")
-                            mbti_data["extracted_date"].append(
-                                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                            )
-                    
-                    current_paragraph = ""
+            # 開始新的類型記錄
+            current_type = found_types[0]
+            current_description = [para]
         
-        # 處理最後一個段落
-        if current_paragraph and any(type_kw in current_paragraph for type_kw in type_keywords):
-            description = cc.convert(current_paragraph.strip())
-            found_occupations = [occ for occ in occupations if occ in description] or ["其他"]
-            for occupation in found_occupations:
-                mbti_data["personality_type"].append(mbti_type)
-                mbti_data["occupation"].append(occupation)
-                mbti_data["description"].append(description)
-                mbti_data["source_url"].append("current_url")
-                mbti_data["extracted_date"].append(
-                    datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                )
+        elif current_type and any(keyword in para for keyword in keywords):
+            # 如果是當前類型的相關描述，添加到描述列表
+            current_description.append(para)
+    
+    # 處理最後一個類型的資料
+    if current_type and current_description:
+        description = " ".join(current_description)
+        found_occupations = [occ for occ in occupations if occ in description] or ["其他"]
+        
+        for occupation in found_occupations:
+            mbti_data["personality_type"].append(current_type)
+            mbti_data["occupation"].append(occupation)
+            mbti_data["description"].append(description)
+            mbti_data["source_url"].append("current_url")
+            mbti_data["extracted_date"].append(
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            )
+    
+    # 清理描述文本
+    cleaned_descriptions = []
+    for desc in mbti_data["description"]:
+        # 移除重複的 MBTI 類型標記
+        for mbti_type in mbti_types:
+            desc = desc.replace(f"TOP{len(cleaned_descriptions)+1}: {mbti_type}", "")
+            desc = desc.replace(f"MBTITOP{len(cleaned_descriptions)+1}: {mbti_type}", "")
+        # 移除百分比統計
+        desc = ' '.join([s for s in desc.split() if not (s.endswith('%') and any(c.isdigit() for c in s))])
+        cleaned_descriptions.append(desc.strip())
+    
+    mbti_data["description"] = cleaned_descriptions
     
     print(f"找到 {len(mbti_data['description'])} 條相關描述")
     for mbti_type in mbti_types:
@@ -271,8 +299,8 @@ def create_vector_store(csv_path: str = None) -> str:
                    f"Description: {row['description']}\n")
             texts.append(text)
             
-            # 使用 HuggingFace 模型獲取向量表示
-            vector = hf_provider.embed_query(text)
+            # 使用 Gemini 模型獲取向量表示
+            vector = gemini_provider.embed_query(text)
             all_vectors.append(vector)
             
             # 準備元數據
@@ -326,6 +354,10 @@ def query_mbti_data(query: str, store_name: str = None) -> str:
         查詢結果
     """
     try:
+        # 檢查查詢內容是否與 MBTI 相關
+        if not is_mbti_related_query(query):
+            return "查詢內容似乎與 MBTI 無關，請輸入 MBTI 相關的查詢。"
+
         vector_dir = "mbti_data/vectors"
         if not os.path.exists(vector_dir):
             return "錯誤：找不到向量存儲目錄"
@@ -353,27 +385,38 @@ def query_mbti_data(query: str, store_name: str = None) -> str:
             data = json.load(f)
         
         # 獲取查詢向量
-        query_vector = hf_provider.embed_query(query)
+        query_vector = gemini_provider.embed_query(query)
         query_vector = np.array([query_vector], dtype=np.float32)
 
-        # 執行查詢
-        k = 3  # 返回前3個最相關的結果
+        # 執行查詢，增加返回結果數量以便後續過濾
+        k = 5  # 返回前5個結果
         distances, indices = index.search(query_vector, k)
         
         if len(indices[0]) == 0:
             return "未找到相關結果"
 
-        # 格式化結果
+        # 計算相關性閾值（可以根據需要調整）
+        relevance_threshold = 0.3
+
+        # 過濾和格式化結果
         formatted_results = []
         for i, idx in enumerate(indices[0]):
             distance = distances[0][i]
-            text = data["texts"][int(idx)]
-            metadata = data["metadatas"][int(idx)]
+            relevance_score = 1/(1+distance)  # 將距離轉換為相關性分數
             
-            # 美化輸出格式
-            result = f"""
+            # 只保留相關性分數超過閾值的結果
+            if relevance_score >= relevance_threshold:
+                text = data["texts"][int(idx)]
+                metadata = data["metadatas"][int(idx)]
+                
+                # 檢查內容相關性
+                if not is_result_relevant(query, text):
+                    continue
+                
+                # 美化輸出格式
+                result = f"""
 {'='*50}
-【搜尋結果 {i+1}】相關度: {1/(1+distance):.2f}
+【搜尋結果 {len(formatted_results)+1}】相關度: {relevance_score:.2f}
 {'-'*50}
 ▍MBTI類型：{metadata['personality_type']}
 ▍職業類別：{metadata['occupation']}
@@ -382,7 +425,10 @@ def query_mbti_data(query: str, store_name: str = None) -> str:
 {text.strip()}
 {'='*50}
 """
-            formatted_results.append(result)
+                formatted_results.append(result)
+
+        if not formatted_results:
+            return "未找到足夠相關的結果，請嘗試調整查詢內容。"
 
         # 添加查詢資訊
         header = f"""
@@ -401,32 +447,45 @@ def query_mbti_data(query: str, store_name: str = None) -> str:
     except Exception as e:
         return f"查詢失敗: {str(e)}\n錯誤類型: {type(e).__name__}"
 
-# 初始化系統提示詞
-messages = [
-    {
-        "role": "system",
-        "content": """
-你是一個專業的 MBTI 性格分析專家，負責分析和解釋 MBTI 相關數據。
-請注意以下要求：
-1. 所有回應必須使用繁體中文
-2. 分析結果需要包含：
-   - 數據收集概況
-   - 各 MBTI 類型的分布情況
-   - 職業傾向分析
-   - 文化背景分析
-   - 年齡分布分析
-3. 提供具體的數據支持，包含百分比
-4. 對特殊趨勢提出專業見解
-5. 建議使用條列式呈現重要發現
-"""
+def is_mbti_related_query(query: str) -> bool:
+    """檢查查詢是否與 MBTI 相關"""
+    # MBTI 相關關鍵詞
+    mbti_keywords = {
+        'MBTI', 'Myers-Briggs', 'personality type', 'cognitive functions',
+        'introvert', 'extrovert', 'intuitive', 'sensing', 'thinking', 'feeling',
+        'judging', 'perceiving', '性格', '人格', '職業', '工作', '領導',
+        'INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP',
+        'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP'
     }
-]
+    
+    query_lower = query.lower()
+    # 檢查是否包含任何 MBTI 關鍵詞
+    return any(keyword.lower() in query_lower for keyword in mbti_keywords)
 
-# 初始化模型
-model = HfApiModel(
-    model_id=os.getenv('HUGGINGFACE_MODEL'),
-    messages=messages
-)
+def is_result_relevant(query: str, result: str) -> bool:
+    """檢查結果是否與查詢相關"""
+    # 將查詢和結果轉換為小寫以進行比較
+    query_lower = query.lower()
+    result_lower = result.lower()
+    
+    # 提取查詢中的 MBTI 類型（如果有）
+    mbti_types = ['INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP',
+                  'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP']
+    query_mbti_types = [t for t in mbti_types if t in query.upper()]
+    
+    # 如果查詢包含特定的 MBTI 類型，確保結果也包含該類型
+    if query_mbti_types and not any(t in result.upper() for t in query_mbti_types):
+        return False
+    
+    # 提取查詢中的關鍵詞（排除停用詞）
+    query_keywords = set(query_lower.split()) - {'的', '是', '在', '了', '和', '與', '或', '什麼', '如何', '為什麼'}
+    
+    # 計算關鍵詞匹配度
+    matched_keywords = sum(1 for word in query_keywords if word in result_lower)
+    keyword_ratio = matched_keywords / len(query_keywords) if query_keywords else 0
+    
+    # 根據匹配度決定相關性
+    return keyword_ratio >= 0.3  # 可以調整這個閾值
 
 # 初始化代理
 agent = ToolCallingAgent(

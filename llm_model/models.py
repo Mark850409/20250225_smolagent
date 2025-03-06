@@ -7,6 +7,7 @@ import requests
 from huggingface_hub import InferenceClient
 import google.generativeai as genai
 from sentence_transformers import SentenceTransformer
+import numpy as np
 
 # 載入環境變數
 load_dotenv()
@@ -100,35 +101,84 @@ class OpenAIProvider(BaseModelProvider):
 class GeminiProvider(BaseModelProvider):
     """Google Gemini 模型供應商"""
     
-    def __init__(self, model_name: str = "gemini-pro"):
-        self.api_key = os.getenv("GOOGLE_API_KEY")
+    def __init__(self, model_name: str = "gemini-2.0-flash-exp"):
+        self.api_key = os.getenv("GEMINI_API_KEY")
         if not self.api_key:
-            raise ValueError("未設置 GOOGLE_API_KEY")
+            raise ValueError("未設置 GEMINI_API_KEY")
         self._model_name = model_name
         genai.configure(api_key=self.api_key)
         self.model = genai.GenerativeModel(model_name)
+        self._embedding_model = None
+        self.generation_config = {
+            "temperature": 0.9,
+            "top_p": 1,
+            "top_k": 1,
+            "max_output_tokens": 2048,
+        }
 
     @property
     def model_name(self) -> str:
         return self._model_name
 
     def generate(self, prompt: str, system_prompt: str = None) -> str:
-        if system_prompt:
-            prompt = f"{system_prompt}\n\n{prompt}"
-        response = self.model.generate_content(prompt)
-        return response.text
+        """生成回應"""
+        try:
+            # 組合提示詞
+            if system_prompt:
+                prompt = f"{system_prompt}\n\n{prompt}"
+            
+            # 生成回應
+            response = self.model.generate_content(prompt)
+            
+            # 直接返回文本
+            return response.text
+
+        except Exception as e:
+            print(f"Error in generate: {str(e)}")
+            return str(e)
 
     def chat(self, messages: List[Dict[str, str]]) -> str:
-        chat = self.model.start_chat()
-        for message in messages:
-            if message["role"] != "system":
-                chat.send_message(message["content"])
-        return chat.last.text
+        """聊天對話"""
+        try:
+            # 將消息轉換為純文本格式
+            prompt = ""
+            for msg in messages:
+                role = msg["role"]
+                content = msg["content"]
+                prompt += f"{role}: {content}\n"
+            
+            # 使用 generate_content 生成回應
+            response = self.model.generate_content(prompt)
+            
+            # 直接返回文本
+            return response.text
+
+        except Exception as e:
+            print(f"Error in chat: {str(e)}")
+            return str(e)
+
+    def embed_query(self, text: str) -> List[float]:
+        """將文本轉換為向量"""
+        try:
+            if self._embedding_model is None:
+                self._embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+            return self._embedding_model.encode(text, convert_to_numpy=True)
+        except Exception as e:
+            print(f"Error in embedding: {str(e)}")
+            return np.zeros(384)
+
+    def run(self, prompt: str) -> str:
+        """運行模型生成回應"""
+        return self.generate(prompt)
+
+    def get_chat_model(self):
+        """獲取聊天模型實例"""
+        return self
 
 class HuggingFaceProvider(BaseModelProvider):
     """HuggingFace 模型供應商"""
     
-    def __init__(self, model_name: str = "Qwen/Qwen2.5-Coder-32B-Instruct"):
+    def __init__(self, model_name: str = "meta-llama/Llama-3.2-3B-Instruct"):
         self.api_key = os.getenv("HUGGINGFACE_API_KEY")
         if not self.api_key:
             raise ValueError("未設置 HUGGINGFACE_API_KEY")
@@ -225,7 +275,7 @@ if __name__ == "__main__":
         gemini_provider = ModelFactory.create_provider("gemini", "gemini-pro")
         
         # HuggingFace
-        hf_provider = ModelFactory.create_provider("huggingface", "Qwen/Qwen2.5-Coder-32B-Instruct")
+        hf_provider = ModelFactory.create_provider("huggingface")
         
         # Ollama
         ollama_provider = ModelFactory.create_provider("ollama", "llama2")

@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict
 import threading
+import time
 
 
 # 載入環境變數
@@ -273,7 +274,7 @@ def is_english(text: str) -> bool:
     
     return english_words / len(words) > 0.5  # 如果超過 50% 是英文單詞，則視為英文
 
-def batch_translate(texts: List[str], prompt_template: str, batch_size: int = 5) -> List[str]:
+def batch_translate(texts: List[str], prompt_template: str, batch_size: int = 3) -> List[str]:
     """批量翻譯文本
     
     Args:
@@ -286,31 +287,71 @@ def batch_translate(texts: List[str], prompt_template: str, batch_size: int = 5)
     """
     translated_texts = []
     
-    def translate_batch(batch: List[str]) -> str:
-        # 將多個文本組合成一個批次
-        combined_text = "\n---\n".join(batch)
-        prompt = prompt_template.format(text=combined_text)
-        
-        # 使用 agent 進行翻譯
-        result = agent.run(prompt).strip()
-        return result
-    
     # 將文本分批
-    batches = [texts[i:i + batch_size] for i in range(0, len(texts), batch_size)]
-    
-    # 使用線程池進行並行翻譯
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        futures = []
-        for batch in batches:
-            future = executor.submit(translate_batch, batch)
-            futures.append(future)
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i:i + batch_size]
         
-        # 獲取所有翻譯結果
-        for future in futures:
-            result = future.result()
-            # 分割結果為單獨的翻譯
-            translations = [t.strip() for t in result.split("\n---\n")]
-            translated_texts.extend(translations)
+        # 為每個批次創建翻譯提示詞
+        batch_text = "\n---\n".join(batch)
+        prompt = f"""請將以下文本翻譯成繁體中文，保持專業性和準確性。
+每個段落之間使用 "---" 分隔：
+
+{batch_text}
+
+注意：
+1. 保留 MBTI 相關的專業術語
+2. 保持描述的準確性和流暢性
+3. 只需要輸出中文翻譯結果，不需要其他說明
+4. 使用 "---" 分隔不同段落的翻譯
+"""
+        
+        try:
+            # 使用 agent 進行翻譯
+            result = agent.run(prompt)
+            # 分割結果
+            translations = [t.strip() for t in result.strip().split("\n---\n")]
+            
+            # 確保翻譯結果數量與原文相符
+            if len(translations) == len(batch):
+                translated_texts.extend(translations)
+            else:
+                # 如果翻譯結果數量不符，逐個翻譯
+                for text in batch:
+                    single_prompt = f"""請將以下文本翻譯成繁體中文：
+
+{text}
+
+注意：
+1. 保留 MBTI 相關的專業術語
+2. 保持描述的準確性和流暢性
+3. 只需要輸出中文翻譯結果
+"""
+                    single_result = agent.run(single_prompt)
+                    translated_texts.append(single_result.strip())
+            
+            # 添加延遲以避免請求過快
+            time.sleep(1)
+            
+        except Exception as e:
+            print(f"翻譯批次出錯: {str(e)}")
+            # 發生錯誤時，逐個翻譯
+            for text in batch:
+                try:
+                    single_prompt = f"""請將以下文本翻譯成繁體中文：
+
+{text}
+
+注意：
+1. 保留 MBTI 相關的專業術語
+2. 保持描述的準確性和流暢性
+3. 只需要輸出中文翻譯結果
+"""
+                    single_result = agent.run(single_prompt)
+                    translated_texts.append(single_result.strip())
+                    time.sleep(1)
+                except:
+                    # 如果單個翻譯也失敗，添加原文
+                    translated_texts.append(text)
     
     return translated_texts
 
@@ -518,32 +559,21 @@ def tavily_search_mbti(prompt: str, progress: str = "") -> str:
             progress_text += "\n正在批量翻譯描述文本...\n"
             yield progress_text
             
-            description_prompt = """
-請將以下 MBTI 相關描述翻譯成中文，保持專業性和準確性。
-每個描述之間使用 "---" 分隔：
-
-{text}
-
-注意：
-1. 保留 MBTI 相關的專業術語
-2. 保持描述的準確性和流暢性
-3. 只需要輸出中文翻譯結果，不需要其他說明
-4. 使用 "---" 分隔不同描述的翻譯
-"""
-            
-            descriptions_zh = batch_translate(
-                all_data["description"],
-                description_prompt,
-                batch_size=3
-            )
-            
-            translated_data["description"] = descriptions_zh
-            progress_text += f"\n描述翻譯結果（共 {len(descriptions_zh)} 筆）：\n"
-            for i, (en, zh) in enumerate(zip(all_data["description"], descriptions_zh), 1):
-                progress_text += f"\n=== 第 {i} 筆翻譯 ===\n"
-                progress_text += f"原文：{en}\n"
-                progress_text += f"翻譯：{zh}\n"
-            yield progress_text
+            try:
+                descriptions_zh = batch_translate(
+                    all_data["description"],
+                    "",  # 提示詞模板已在函數內部定義
+                    batch_size=2  # 降低批次大小以提高穩定性
+                )
+                
+                translated_data["description"] = descriptions_zh
+                progress_text += f"\n描述翻譯完成（共 {len(descriptions_zh)} 筆）\n"
+                yield progress_text
+                
+            except Exception as e:
+                progress_text += f"\n翻譯過程出錯：{str(e)}\n使用原文繼續處理...\n"
+                translated_data["description"] = all_data["description"]
+                yield progress_text
         
         # 確保所有列表長度一致
         max_length = max(len(v) for v in translated_data.values())
@@ -622,6 +652,25 @@ MBTI類型：{len(df['personality_type'].unique())} 種
     except Exception as e:
         progress_text += f"\n搜索過程出錯：{str(e)}\n"
         yield progress_text
+
+def create_interface():
+    # 創建 Gradio 介面
+    interface = gr.Interface(
+        fn=process_mbti_data,
+        inputs=gr.Textbox(lines=5, placeholder="輸入要分析的網址（每行一個）", label="目標網址"),
+        outputs=gr.Textbox(label="處理進度和結果", lines=30),
+        title="網址數據分析處理",
+        description="輸入要分析的網址（每行一個）",
+        examples=["https://www.cosmopolitan.com/tw/horoscopes/spiritual-healing/g62945060/mbti-1119/",
+                  "https://www.cosmopolitan.com/tw/horoscopes/spiritual-healing/g46433226/mbti-16-2024/",
+                  "https://tw.imyfone.com/ai-tips/16-personalities-interpretation/"],
+        allow_flagging="never"
+    )
+    return interface
+
+def launch(*args, **kwargs):
+    interface = create_interface()
+    return interface.launch(*args, **kwargs)
 
 # 創建 Gradio 介面
 with gr.Blocks(title="MBTI 性格分析工具", theme=gr.themes.Soft()) as web_ui:
@@ -777,4 +826,4 @@ https://tw.imyfone.com/ai-tips/16-personalities-interpretation/"""
 
 # 啟動 Web 介面
 if __name__ == "__main__":
-    web_ui.launch(share=True) 
+    launch(share=True) 

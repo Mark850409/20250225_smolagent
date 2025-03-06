@@ -18,8 +18,6 @@ resources:
 
 variables: 
   - group: mbti-analyzer-variables  # 引入變數群組
-  - name: azureServiceConnection  # Azure 服務連接名稱
-    value: 'acrmbtianlyzer.azurecr.io'    # 使用完整的 ACR 登入伺服器名稱
   - name: projectName  # 專案設定
     value: 'mbti-analyzer'
   - name: pythonVersion
@@ -32,6 +30,8 @@ variables:
     value: 'eastasia'
   - name: acrName
     value: 'acrmbtianlyzer'  # ACR 名稱必須是全域唯一的
+  - name: azureSubscription
+    value: 'rg-mbti-analyzer'
   - name: webAppName
     value: 'app-mbti-analyzer'
   - name: appServicePlanName
@@ -65,7 +65,7 @@ stages:
     - task: AzureCLI@2
       name: SetACRVariables  # 添加名稱以便後續參考
       inputs:
-        azureSubscription: 'rg-mbti-analyzer'
+        azureSubscription: '$(azureSubscription)'
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
@@ -97,9 +97,9 @@ stages:
           ACR_LOGIN_SERVER=$(acrName).azurecr.io
           
           # 設定 pipeline 變數
-          echo "##vso[task.setvariable variable=ACR_USERNAME;isOutput=true]$ACR_USERNAME"
-          echo "##vso[task.setvariable variable=ACR_PASSWORD;isOutput=true]$ACR_PASSWORD"
-          echo "##vso[task.setvariable variable=ACR_LOGIN_SERVER;isOutput=true]$ACR_LOGIN_SERVER"
+          echo "##vso[task.setvariable variable=ACR_USERNAME;isOutput=true;public=true]$ACR_USERNAME"
+          echo "##vso[task.setvariable variable=ACR_PASSWORD;isOutput=true;public=true]$ACR_PASSWORD"
+          echo "##vso[task.setvariable variable=ACR_LOGIN_SERVER;isOutput=true;public=true]$ACR_LOGIN_SERVER"
 
 - stage: Build
   displayName: 'Build and Push Docker Image'
@@ -113,7 +113,7 @@ stages:
     - task: AzureCLI@2
       displayName: 'Login to ACR'
       inputs:
-        azureSubscription: 'rg-mbti-analyzer'
+        azureSubscription: '$(azureSubscription)'
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
@@ -130,13 +130,14 @@ stages:
 
 - stage: Deploy
   displayName: 'Deploy to Azure Web App'
-  # dependsOn: 
-  # - Infrastructure
-  # - Build
+  dependsOn: 
+  - Infrastructure
+  - Build
   variables:
-    ACR_USERNAME: $[ stageDependencies.Infrastructure.CreateInfrastructure.outputs['SetACRVariables.ACR_USERNAME'] ]
-    ACR_PASSWORD: $[ stageDependencies.Infrastructure.CreateInfrastructure.outputs['SetACRVariables.ACR_PASSWORD'] ]
-    ACR_LOGIN_SERVER: $[ stageDependencies.Infrastructure.CreateInfrastructure.outputs['SetACRVariables.ACR_LOGIN_SERVER'] ]
+    # 從 Infrastructure stage 的 SetACRVariables task 獲取變數
+    ACR_LOGIN_SERVER: $[ dependencies.Infrastructure.outputs['SetACRVariables.ACR_LOGIN_SERVER'] ]
+    ACR_USERNAME: $[ dependencies.Infrastructure.outputs['SetACRVariables.ACR_USERNAME'] ]
+    ACR_PASSWORD: $[ dependencies.Infrastructure.outputs['SetACRVariables.ACR_PASSWORD'] ]
   jobs:
   - job: Deploy
     pool:
@@ -144,7 +145,7 @@ stages:
     steps:
     - task: AzureCLI@2
       inputs:
-        azureSubscription: 'rg-mbti-analyzer'
+        azureSubscription: '$(azureSubscription)'
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
@@ -179,7 +180,7 @@ stages:
             --resource-group $(resourceGroupName) \
             --plan $(appServicePlanName) \
             --name $(webAppName) \
-            --deployment-container-image-name $(ACR_LOGIN_SERVER)/$(imageRepository):latest
+            --deployment-container-image-name $(ACR_LOGIN_SERVER)/$(imageRepository):$(tag)
           
           # 設定 ACR 認證
           echo "Configuring ACR credentials..."
