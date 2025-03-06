@@ -100,12 +100,15 @@ stages:
     pool:
       vmImage: 'ubuntu-latest'
     steps:
-    # 登入 ACR
-    - task: Docker@2
-      inputs:
-        containerRegistry: '$(dockerRegistryServiceConnection)'
-        command: 'login'
+    # 使用 Azure CLI 登入 ACR，確保 Azure DevOps Pipeline 有 ACR Push 權限
+    - task: AzureCLI@2
       displayName: 'Login to ACR'
+      inputs:
+        azureSubscription: 'rg-mbti-analyzer'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az acr login --name $(acrName)
 
     # 建立並推送 Docker 映像
     - task: Bash@3
