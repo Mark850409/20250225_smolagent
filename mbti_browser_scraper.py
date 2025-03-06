@@ -68,25 +68,14 @@ def browse_webpage(url: str) -> str:
                 print(error_msg)
                 return error_msg
 
-    # 檢查是否已有事件循環
+    # 使用 asyncio.new_event_loop() 創建新的事件循環
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        # 如果沒有事件循環，創建一個新的
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
         result = loop.run_until_complete(_browse())
-        loop.close()
         return result
-    else:
-        # 如果已有事件循環，直接在當前循環中運行
-        if loop.is_running():
-            # 如果循環正在運行，使用 run_coroutine_threadsafe
-            future = asyncio.run_coroutine_threadsafe(_browse(), loop)
-            return future.result()
-        else:
-            # 如果循環未運行，使用 run_until_complete
-            return loop.run_until_complete(_browse())
+    finally:
+        loop.close()
 
 @tool
 def extract_mbti_info(content: str) -> dict:

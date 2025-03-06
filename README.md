@@ -168,4 +168,7 @@ az role assignment create \
 
 # 列出指定倉庫下所有權限
 az role assignment list --assignee $(az ad signed-in-user show --query id -o tsv) --scope /subscriptions/$(az account show --query "id" -o tsv)/resourceGroups/AIChatBot/providers/Microsoft.ContainerRegistry/registries/acrmbtianlyzer --query "[].roleDefinitionName" -o table
+
+# 查看即時LOG
+az webapp log tail --name app-mbti-analyzer --resource-group AIChatBot
 ```
