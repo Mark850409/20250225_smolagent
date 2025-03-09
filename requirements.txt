@@ -7,11 +7,14 @@ gradio
 playwright
 langchain
 langchain-community
+langchain-google-genai
 pandas
 python-dotenv
+openai
 
 # AI 模型和代理
 smolagents
+browser-use
 huggingface-hub
 google-generativeai
 sentence-transformers
